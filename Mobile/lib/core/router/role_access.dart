@@ -16,18 +16,26 @@ class ShellNavItem {
 }
 
 abstract final class RoleAccess {
+  static const _settingsNavItem = ShellNavItem(
+    label: 'Settings',
+    icon: Icons.settings_outlined,
+    route: AppRoutes.settings,
+  );
+
   static String defaultRoute(UserRole role) {
     return switch (role) {
-      UserRole.fleetManager => AppRoutes.fleet,
-      UserRole.dispatcher => AppRoutes.dashboard,
-      UserRole.safetyOfficer => AppRoutes.drivers,
-      UserRole.financialAnalyst => AppRoutes.expenses,
+      UserRole.ADMIN => AppRoutes.dashboard,
+      UserRole.FLEET_MANAGER => AppRoutes.fleet,
+      UserRole.DRIVER => AppRoutes.dashboard,
+      UserRole.SAFETY_OFFICER => AppRoutes.drivers,
+      UserRole.FINANCIAL_ANALYST => AppRoutes.expenses,
     };
   }
 
-  static List<ShellNavItem> bottomNavItems(UserRole role) {
+  static List<ShellNavItem> sidebarNavItems(UserRole role) {
     return switch (role) {
-      UserRole.fleetManager => const [
+      UserRole.ADMIN => _adminNavItems,
+      UserRole.FLEET_MANAGER => const [
           ShellNavItem(
             label: 'Fleet',
             icon: Icons.local_shipping_outlined,
@@ -38,13 +46,9 @@ abstract final class RoleAccess {
             icon: Icons.build_outlined,
             route: AppRoutes.maintenance,
           ),
-          ShellNavItem(
-            label: 'Settings',
-            icon: Icons.settings_outlined,
-            route: AppRoutes.settings,
-          ),
+          _settingsNavItem,
         ],
-      UserRole.dispatcher => const [
+      UserRole.DRIVER => const [
           ShellNavItem(
             label: 'Dashboard',
             icon: Icons.dashboard_outlined,
@@ -55,25 +59,17 @@ abstract final class RoleAccess {
             icon: Icons.route_outlined,
             route: AppRoutes.trips,
           ),
-          ShellNavItem(
-            label: 'Settings',
-            icon: Icons.settings_outlined,
-            route: AppRoutes.settings,
-          ),
+          _settingsNavItem,
         ],
-      UserRole.safetyOfficer => const [
+      UserRole.SAFETY_OFFICER => const [
           ShellNavItem(
             label: 'Drivers',
             icon: Icons.person_outline,
             route: AppRoutes.drivers,
           ),
-          ShellNavItem(
-            label: 'Settings',
-            icon: Icons.settings_outlined,
-            route: AppRoutes.settings,
-          ),
+          _settingsNavItem,
         ],
-      UserRole.financialAnalyst => const [
+      UserRole.FINANCIAL_ANALYST => const [
           ShellNavItem(
             label: 'Expenses',
             icon: Icons.payments_outlined,
@@ -84,11 +80,7 @@ abstract final class RoleAccess {
             icon: Icons.bar_chart_outlined,
             route: AppRoutes.analytics,
           ),
-          ShellNavItem(
-            label: 'Settings',
-            icon: Icons.settings_outlined,
-            route: AppRoutes.settings,
-          ),
+          _settingsNavItem,
         ],
     };
   }
@@ -102,7 +94,11 @@ abstract final class RoleAccess {
       return true;
     }
 
-    final allowedRoutes = bottomNavItems(role).map((item) => item.route).toSet();
+    final allowedRoutes =
+        sidebarNavItems(role).map((item) => item.route).toSet();
+    if (role == UserRole.ADMIN) {
+      return AppRoutes.shellRoutes.contains(location);
+    }
     return allowedRoutes.contains(location);
   }
 
@@ -111,4 +107,47 @@ abstract final class RoleAccess {
         location == AppRoutes.login ||
         location.startsWith(AppRoutes.unauthorized);
   }
+
+  static const List<ShellNavItem> _adminNavItems = [
+    ShellNavItem(
+      label: 'Dashboard',
+      icon: Icons.dashboard_outlined,
+      route: AppRoutes.dashboard,
+    ),
+    ShellNavItem(
+      label: 'Fleet',
+      icon: Icons.local_shipping_outlined,
+      route: AppRoutes.fleet,
+    ),
+    ShellNavItem(
+      label: 'Drivers',
+      icon: Icons.person_outline,
+      route: AppRoutes.drivers,
+    ),
+    ShellNavItem(
+      label: 'Trips',
+      icon: Icons.route_outlined,
+      route: AppRoutes.trips,
+    ),
+    ShellNavItem(
+      label: 'Maintenance',
+      icon: Icons.build_outlined,
+      route: AppRoutes.maintenance,
+    ),
+    ShellNavItem(
+      label: 'Fuel & Expenses',
+      icon: Icons.payments_outlined,
+      route: AppRoutes.expenses,
+    ),
+    ShellNavItem(
+      label: 'Analytics',
+      icon: Icons.bar_chart_outlined,
+      route: AppRoutes.analytics,
+    ),
+    ShellNavItem(
+      label: 'Settings',
+      icon: Icons.settings_outlined,
+      route: AppRoutes.settings,
+    ),
+  ];
 }

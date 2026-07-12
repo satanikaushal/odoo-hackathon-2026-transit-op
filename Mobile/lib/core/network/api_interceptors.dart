@@ -1,18 +1,21 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 import '../constants/api_endpoints.dart';
-import '../storage/local_storage.dart';
+import '../../features/auth/data/token_refresh_service.dart';
+import 'api_logger.dart';
 import 'unauthorized_handler.dart';
 
 class AuthInterceptor extends Interceptor {
   AuthInterceptor({
-    required SecureStorageService secureStorage,
+    required Dio dio,
+    required TokenRefreshService tokenRefreshService,
     required UnauthorizedHandler unauthorizedHandler,
-  })  : _secureStorage = secureStorage,
+  })  : _dio = dio,
+        _tokenRefreshService = tokenRefreshService,
         _unauthorizedHandler = unauthorizedHandler;
 
-  final SecureStorageService _secureStorage;
+  final Dio _dio;
+  final TokenRefreshService _tokenRefreshService;
   final UnauthorizedHandler _unauthorizedHandler;
 
   @override
@@ -20,10 +23,16 @@ class AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final token = await _secureStorage.getAccessToken();
-    if (token != null && token.isNotEmpty) {
-      options.headers['Authorization'] = 'Bearer $token';
+    if (ApiEndpoints.skipsTokenRefresh(options.path)) {
+      handler.next(options);
+      return;
     }
+
+    final accessToken = await _tokenRefreshService.ensureValidAccessToken();
+    if (accessToken != null && accessToken.isNotEmpty) {
+      options.headers['Authorization'] = 'Bearer $accessToken';
+    }
+
     handler.next(options);
   }
 
@@ -32,17 +41,46 @@ class AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    if (err.response?.statusCode == 401) {
-      await _unauthorizedHandler.handle();
+    final statusCode = err.response?.statusCode;
+    if (statusCode != 401) {
+      handler.next(err);
+      return;
     }
-    handler.next(err);
+
+    final requestOptions = err.requestOptions;
+    if (ApiEndpoints.skipsTokenRefresh(requestOptions.path)) {
+      handler.next(err);
+      return;
+    }
+
+    if (requestOptions.extra[ApiExtras.retriedAfterRefresh] == true) {
+      await _unauthorizedHandler.handle();
+      handler.next(err);
+      return;
+    }
+
+    final accessToken = await _tokenRefreshService.refreshTokens();
+    if (accessToken == null || accessToken.isEmpty) {
+      handler.next(err);
+      return;
+    }
+
+    requestOptions.headers['Authorization'] = 'Bearer $accessToken';
+    requestOptions.extra[ApiExtras.retriedAfterRefresh] = true;
+
+    try {
+      final response = await _dio.fetch<dynamic>(requestOptions);
+      handler.resolve(response);
+    } on DioException catch (retryError) {
+      handler.next(retryError);
+    }
   }
 }
 
 class LoggingInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    debugPrint('--> ${options.method} ${options.uri}');
+    ApiLogger.logRequest(options);
     handler.next(options);
   }
 
@@ -51,15 +89,13 @@ class LoggingInterceptor extends Interceptor {
     Response<dynamic> response,
     ResponseInterceptorHandler handler,
   ) {
-    debugPrint('<-- ${response.statusCode} ${response.requestOptions.uri}');
+    ApiLogger.logResponse(response);
     handler.next(response);
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    debugPrint(
-      '<-- ERROR ${err.response?.statusCode} ${err.requestOptions.uri}',
-    );
+    ApiLogger.logError(err);
     handler.next(err);
   }
 }

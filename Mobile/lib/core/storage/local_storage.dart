@@ -29,9 +29,31 @@ class SecureStorageService {
     return _storage.read(key: StorageKeys.refreshToken);
   }
 
+  Future<void> saveAccessTokenExpiresAt(String value) {
+    return _storage.write(key: StorageKeys.accessTokenExpiresAt, value: value);
+  }
+
+  Future<String?> getAccessTokenExpiresAt() {
+    return _storage.read(key: StorageKeys.accessTokenExpiresAt);
+  }
+
+  Future<void> saveRefreshTokenExpiresAt(String value) {
+    return _storage.write(key: StorageKeys.refreshTokenExpiresAt, value: value);
+  }
+
+  Future<String?> getRefreshTokenExpiresAt() {
+    return _storage.read(key: StorageKeys.refreshTokenExpiresAt);
+  }
+
+  Future<void> deleteRefreshTokenExpiresAt() {
+    return _storage.delete(key: StorageKeys.refreshTokenExpiresAt);
+  }
+
   Future<void> clearTokens() async {
     await _storage.delete(key: StorageKeys.accessToken);
     await _storage.delete(key: StorageKeys.refreshToken);
+    await _storage.delete(key: StorageKeys.accessTokenExpiresAt);
+    await _storage.delete(key: StorageKeys.refreshTokenExpiresAt);
   }
 }
 
@@ -50,6 +72,16 @@ class PreferencesService {
 
   Future<bool> setRememberMe(bool value) {
     return _prefs.setBool(StorageKeys.rememberMe, value);
+  }
+
+  String? get savedEmail => _prefs.getString(StorageKeys.savedEmail);
+
+  Future<bool> saveSavedEmail(String email) {
+    return _prefs.setString(StorageKeys.savedEmail, email);
+  }
+
+  Future<void> clearSavedEmail() {
+    return _prefs.remove(StorageKeys.savedEmail);
   }
 
   String? get userId => _prefs.getString(StorageKeys.userId);

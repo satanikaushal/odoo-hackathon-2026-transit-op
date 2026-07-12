@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/network/api_result.dart';
+import '../../../core/network/failure.dart';
 import '../../../core/network/unauthorized_handler.dart';
-import '../../../core/storage/local_storage.dart';
+import '../data/auth_repository.dart';
+import '../domain/models/user.dart';
 import '../../../shared/models/user_role.dart';
 
 enum AuthStatus {
@@ -41,6 +44,8 @@ class AuthSessionState {
 }
 
 class AuthSessionNotifier extends Notifier<AuthSessionState> {
+  AuthRepository get _authRepository => getIt<AuthRepository>();
+
   @override
   AuthSessionState build() {
     return const AuthSessionState(status: AuthStatus.unknown);
@@ -48,35 +53,86 @@ class AuthSessionNotifier extends Notifier<AuthSessionState> {
 
   Future<void> restoreSession() async {
     try {
-      final preferences = getIt<PreferencesService>();
-      final secureStorage = getIt<SecureStorageService>();
-
-      final token = await secureStorage.getAccessToken();
-      final isLoggedIn = preferences.isLoggedIn;
-      final role = UserRole.fromString(preferences.userRole);
-
-      if (!isLoggedIn || token == null || token.isEmpty || role == null) {
-        state = const AuthSessionState(status: AuthStatus.unauthenticated);
+      if (!await _authRepository.hasStoredSession()) {
+        markUnauthenticated();
         return;
       }
 
-      state = AuthSessionState(
-        status: AuthStatus.authenticated,
-        user: AuthUser(
-          id: preferences.userId ?? '',
-          email: preferences.userEmail ?? '',
-          name: preferences.userName ?? '',
-          role: role,
-        ),
-      );
+      var result = await _authRepository.fetchCurrentUser();
+
+      if (_shouldRetryAfterRefresh(result)) {
+        final refreshed = await _authRepository.refreshTokens();
+        if (refreshed) {
+          result = await _authRepository.fetchCurrentUser();
+        }
+      }
+
+      if (result.isFailure || result.data == null) {
+        await _authRepository.logout();
+        markUnauthenticated();
+        return;
+      }
+
+      setAuthenticated(result.data!);
     } catch (_) {
-      state = const AuthSessionState(status: AuthStatus.unauthenticated);
+      await _authRepository.logout();
+      markUnauthenticated();
     }
+  }
+
+  void setAuthenticated(User user) {
+    UnauthorizedHandler.reset();
+    state = AuthSessionState(
+      status: AuthStatus.authenticated,
+      user: _toAuthUser(user),
+    );
+  }
+
+  Future<Failure?> signIn({
+    required String email,
+    required String password,
+    bool rememberMe = false,
+  }) async {
+    final result = await _authRepository.login(
+      email: email,
+      password: password,
+      rememberMe: rememberMe,
+    );
+
+    if (result.isFailure || result.data == null) {
+      return result.failure ??
+          const Failure(message: 'Unable to sign in. Please try again.');
+    }
+
+    setAuthenticated(result.data!);
+    return null;
+  }
+
+  Future<void> signOut() async {
+    await _authRepository.logout();
+    markUnauthenticated();
   }
 
   void markUnauthenticated() {
     UnauthorizedHandler.reset();
     state = const AuthSessionState(status: AuthStatus.unauthenticated);
+  }
+
+  bool _shouldRetryAfterRefresh(ApiResult<User> result) {
+    if (!result.isFailure) {
+      return false;
+    }
+
+    return result.failure?.type == FailureType.unauthorized;
+  }
+
+  AuthUser _toAuthUser(User user) {
+    return AuthUser(
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    );
   }
 }
 
