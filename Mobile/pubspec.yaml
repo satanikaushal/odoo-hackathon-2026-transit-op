@@ -1,5 +1,5 @@
 name: transit_op
-description: "A new Flutter project."
+description: TransitOps - Smart Transport Operations Platform
 version: 1.0.0+1
 
 environment:
@@ -11,6 +11,23 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
+  # Networking
+  dio: ^5.8.0+1
+
+  # Routing
+  go_router: ^15.1.2
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Local storage
+  flutter_secure_storage: ^9.2.4
+  shared_preferences: ^2.5.3
+
+  # Utilities
+  equatable: ^2.0.7
+  intl: ^0.20.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -18,9 +35,4 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
-
   uses-material-design: true
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg

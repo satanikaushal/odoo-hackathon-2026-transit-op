@@ -1,31 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app.dart';
 import 'core/config/app_environment.dart';
+import 'core/providers/core_providers.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   AppEnvironment.setUp(Env.DEV);
 
-  runApp(const MyApp());
-}
+  final sharedPreferences = await SharedPreferences.getInstance();
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final config = AppEnvironment.current;
-
-    return MaterialApp(
-      title: config.appName,
-      debugShowCheckedModeBanner: config.env == Env.DEV,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
-      ),
-      home: Scaffold(
-        body: Center(
-          child: Text('${config.appName}\n${config.baseUrl}'),
-        ),
-      ),
-    );
-  }
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+      ],
+      child: const App(),
+    ),
+  );
 }
