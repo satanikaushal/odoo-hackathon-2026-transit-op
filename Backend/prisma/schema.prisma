@@ -44,10 +44,17 @@ enum MaintenanceStatus {
   CLOSED
 }
 
+// No MAINTENANCE category: maintenance costs live on MaintenanceLog, and the
+// brief's operational-cost formula (Fuel + Maintenance) reads them from there.
+// A MAINTENANCE expense category would double-count.
 enum ExpenseCategory {
   TOLL
-  MAINTENANCE
   MISC
+}
+
+enum DeviceType {
+  ANDROID
+  IOS
 }
 
 model User {
@@ -64,13 +71,15 @@ model User {
 }
 
 model RefreshToken {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String      @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  deviceType  DeviceType?
+  deviceToken String?
+  createdAt   DateTime    @default(now())
 
   @@index([userId])
 }
@@ -82,7 +91,7 @@ model Vehicle {
   type              String
   maxLoadCapacity   Float
   odometer          Float             @default(0)
-  acquisitionCost   Float
+  acquisitionCost   Decimal           @db.Decimal(12, 2)
   status            VehicleStatus    @default(AVAILABLE)
   region             String?
   createdAt          DateTime         @default(now())
@@ -129,7 +138,7 @@ model Trip {
   actualDistance  Float?
   finalOdometer   Float?
   fuelConsumed    Float?
-  revenue         Float?
+  revenue         Decimal?   @db.Decimal(12, 2)
   status          TripStatus @default(DRAFT)
 
   createdById String
@@ -155,7 +164,7 @@ model MaintenanceLog {
   vehicleId   String
   vehicle     Vehicle           @relation(fields: [vehicleId], references: [id])
   description String
-  cost        Float
+  cost        Decimal           @db.Decimal(12, 2)
   status      MaintenanceStatus @default(OPEN)
   openedAt    DateTime          @default(now())
   closedAt    DateTime?
@@ -172,7 +181,7 @@ model FuelLog {
   tripId    String?
   trip      Trip?    @relation(fields: [tripId], references: [id])
   liters    Float
-  cost      Float
+  cost      Decimal  @db.Decimal(12, 2)
   date      DateTime @default(now())
   createdAt DateTime @default(now())
 
@@ -187,11 +196,12 @@ model Expense {
   tripId      String?
   trip        Trip?           @relation(fields: [tripId], references: [id])
   category    ExpenseCategory
-  amount      Float
+  amount      Decimal         @db.Decimal(12, 2)
   date        DateTime        @default(now())
   description String?
   createdAt   DateTime        @default(now())
 
   @@index([vehicleId])
+  @@index([tripId])
   @@index([category])
 }
