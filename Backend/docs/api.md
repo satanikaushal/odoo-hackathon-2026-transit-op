@@ -5,10 +5,10 @@ requirement, request body, and response shape. For the auth *system* itself
 (tokens, rotation, RBAC internals) see [`auth.md`](./auth.md) — this doc is
 just "what do I send, what do I get back."
 
-This file only documents what's actually implemented. Vehicles, drivers,
-trips, maintenance, fuel/expenses, dashboard, and reports are planned but not
-built yet — see `../PLAN.md` for the full roadmap. Update this file as each
-phase lands; don't let it drift from the code.
+This file only documents what's actually implemented. Vehicles, trips,
+maintenance, fuel/expenses, dashboard, and reports are planned but not built
+yet — see `../PLAN.md` for the full roadmap. Update this file as each phase
+lands; don't let it drift from the code.
 
 ## Conventions
 
@@ -193,6 +193,92 @@ JWT payload).
 
 **401** — missing/invalid/expired access token, or the account was
 deactivated since the token was issued.
+
+---
+
+## Drivers (`/api/drivers`) 🔒
+
+Driver profiles (name, license, safety score, status) that get assigned to
+trips. These are operational records, **not** login accounts — see the naming
+note in `../PLAN.md` §2.
+
+**Every endpoint requires a valid access token.** Reading (`GET`) is open to
+any authenticated role. Writing (`POST`/`PATCH`/`DELETE`) is restricted to
+`FLEET_MANAGER`, `SAFETY_OFFICER`, and `ADMIN` per the RBAC matrix
+(`../PLAN.md` §6); other roles get `403`.
+
+A driver object:
+
+```json
+{
+  "id": "cmrhd0000driver0001",
+  "name": "Jane Doe",
+  "licenseNumber": "DL-0451-2027",
+  "licenseCategory": "LMV",
+  "licenseExpiryDate": "2027-05-01T00:00:00.000Z",
+  "contactNumber": "+91-9876543210",
+  "safetyScore": 100,
+  "status": "AVAILABLE",
+  "createdAt": "2026-07-12T05:24:43.814Z",
+  "updatedAt": "2026-07-12T05:24:43.814Z"
+}
+```
+
+`status` is one of `AVAILABLE`, `ON_TRIP`, `OFF_DUTY`, `SUSPENDED`.
+
+### `GET /api/drivers` 🔒
+
+List drivers, newest first. Optional filters:
+
+| Query | Type | Effect |
+|---|---|---|
+| `status` | one of the `DriverStatus` values | exact-match filter |
+| `q` | string | case-insensitive substring match on name / license number / contact number |
+
+**Response 200**: `data` is an array of driver objects.
+
+### `POST /api/drivers` 🔒 (write roles)
+
+| Field | Type | Required |
+|---|---|---|
+| `name` | string, non-empty | yes |
+| `licenseNumber` | string, non-empty, **unique** | yes |
+| `licenseCategory` | string, non-empty | yes |
+| `licenseExpiryDate` | date (ISO string, e.g. `2027-05-01`) | yes |
+| `contactNumber` | string, non-empty | yes |
+| `safetyScore` | number `0`–`100` | no (defaults to `100`) |
+| `status` | `DriverStatus` | no (defaults to `AVAILABLE`) |
+
+**Response 201**: the created driver object.
+
+**409** `"A driver with this license number already exists"` — duplicate
+`licenseNumber`.
+
+### `GET /api/drivers/:id` 🔒
+
+**Response 200**: the driver object. **404** `"Driver not found"`.
+
+### `PATCH /api/drivers/:id` 🔒 (write roles)
+
+Partial update — send any subset of the `POST` body fields (at least one; an
+empty body is rejected with `400`).
+
+**Response 200**: the updated driver object.
+
+**404** `"Driver not found"`. **409** duplicate `licenseNumber` (same message
+as `POST`).
+
+### `DELETE /api/drivers/:id` 🔒 (write roles)
+
+Hard-delete a driver.
+
+**Response**: `204 No Content`.
+
+**404** `"Driver not found"`.
+
+**409** `"Driver has associated trips and cannot be deleted; set status to
+SUSPENDED or OFF_DUTY instead"` — a driver referenced by any trip can't be
+deleted (the trip history must stay intact); change their `status` instead.
 
 ---
 
