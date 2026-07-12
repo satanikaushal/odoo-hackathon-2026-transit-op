@@ -6,9 +6,9 @@ requirement, request body, and response shape. For the auth *system* itself
 just "what do I send, what do I get back."
 
 This file only documents what's actually implemented. Vehicles, trips,
-maintenance, fuel/expenses, dashboard, and reports are planned but not built
-yet — see `../PLAN.md` for the full roadmap. Update this file as each phase
-lands; don't let it drift from the code.
+maintenance, fuel/expenses, and the dashboard are planned but not built yet —
+see `../PLAN.md` for the full roadmap. Update this file as each phase lands;
+don't let it drift from the code.
 
 ## Conventions
 
@@ -279,6 +279,114 @@ Hard-delete a driver.
 **409** `"Driver has associated trips and cannot be deleted; set status to
 SUSPENDED or OFF_DUTY instead"` — a driver referenced by any trip can't be
 deleted (the trip history must stay intact); change their `status` instead.
+
+---
+
+## Reports (`/api/reports`) 🔒
+
+Read-only fleet analytics. Every endpoint requires a valid access token and is
+restricted to `FLEET_MANAGER`, `FINANCIAL_ANALYST`, `SAFETY_OFFICER`, and
+`ADMIN` per the RBAC matrix (`../PLAN.md` §6) — the `DRIVER` (dispatcher) role
+gets `403`.
+
+All four analytics also export as CSV via `GET /api/reports/export.csv?report=<name>`
+(see below) — same numbers, different serialization.
+
+**Conventions used across the per-vehicle reports:**
+
+- Rows are ordered by `registrationNumber` ascending, and **every** vehicle is
+  included (retired ones too), so a vehicle with no activity shows zeros / `null`.
+- "Trips that ran" means status `DISPATCHED` or `COMPLETED`. `DRAFT` (never
+  dispatched) and `CANCELLED` trips are excluded from distance and revenue.
+- **Operational cost = fuel spend + maintenance spend only.** Expenses
+  (tolls/misc) are tracked separately and are deliberately *not* included, to
+  stay consistent with the ROI formula.
+- Money and percentages are rounded to 2 decimals; ROI (a small ratio) to 4.
+- Divide-by-zero yields `null` rather than `Infinity`/`NaN`.
+
+### `GET /api/reports/fuel-efficiency` 🔒
+
+Distance driven per litre consumed, per vehicle.
+`kmPerLiter = totalDistance / totalLiters` (`null` when the vehicle has no fuel logs).
+
+**Response 200** — `data` is an array of:
+```json
+{
+  "vehicleId": "cmr...",
+  "registrationNumber": "V-001",
+  "name": "Truck A",
+  "totalDistance": 200,
+  "totalLiters": 50,
+  "kmPerLiter": 4
+}
+```
+
+### `GET /api/reports/fleet-utilization` 🔒
+
+Fleet-wide utilization: share of the usable fleet currently `ON_TRIP`.
+`utilizationPct = onTripVehicles / nonRetiredVehicles * 100` (`null` when there
+are no non-retired vehicles).
+
+**Response 200** — `data` is a single object:
+```json
+{
+  "onTripVehicles": 1,
+  "nonRetiredVehicles": 2,
+  "totalVehicles": 3,
+  "utilizationPct": 50
+}
+```
+
+### `GET /api/reports/operational-cost` 🔒
+
+Fuel + maintenance spend per vehicle.
+
+**Response 200** — `data` is an array of:
+```json
+{
+  "vehicleId": "cmr...",
+  "registrationNumber": "V-001",
+  "name": "Truck A",
+  "fuelCost": 4500,
+  "maintenanceCost": 2500,
+  "operationalCost": 7000
+}
+```
+
+### `GET /api/reports/vehicle-roi` 🔒
+
+Return on investment per vehicle.
+`netProfit = totalRevenue − operationalCost`; `roi = netProfit / acquisitionCost`
+(`null` when `acquisitionCost` is 0).
+
+**Response 200** — `data` is an array of:
+```json
+{
+  "vehicleId": "cmr...",
+  "registrationNumber": "V-002",
+  "name": "Van B",
+  "totalRevenue": 4000,
+  "operationalCost": 1600,
+  "acquisitionCost": 50000,
+  "netProfit": 2400,
+  "roi": 0.048
+}
+```
+
+### `GET /api/reports/export.csv?report=<name>` 🔒
+
+CSV download of any of the four reports above (same service functions, so the
+numbers always match the JSON).
+
+| Query | Required | Values |
+|---|---|---|
+| `report` | yes | `fuel-efficiency` \| `fleet-utilization` \| `operational-cost` \| `vehicle-roi` |
+
+**Response 200**: `Content-Type: text/csv; charset=utf-8`,
+`Content-Disposition: attachment; filename="<report>.csv"`. Body is the report
+as CSV (header row + one row per vehicle; `fleet-utilization` is a single row).
+
+**400** — missing `report`, or a value not in the list above.
 
 ---
 
