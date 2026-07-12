@@ -39,6 +39,22 @@ export const driverService = {
     };
   },
 
+  // Drivers whose license expires within `withinDays` from now, excluding
+  // SUSPENDED drivers (they're not on active duty). Used by the daily
+  // license-expiry reminder job. Soonest-to-expire first.
+  async findExpiringLicenses(withinDays: number) {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + withinDays * 24 * 60 * 60 * 1000);
+
+    return prisma.driver.findMany({
+      where: {
+        status: { not: "SUSPENDED" },
+        licenseExpiryDate: { gte: now, lte: cutoff },
+      },
+      orderBy: { licenseExpiryDate: "asc" },
+    });
+  },
+
   async getById(id: string) {
     const driver = await prisma.driver.findUnique({ where: { id } });
     if (!driver) throw ApiError.notFound("Driver not found");
