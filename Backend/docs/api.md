@@ -99,10 +99,22 @@ No auth.
 |---|---|---|
 | `email` | string, valid email | yes |
 | `password` | string, non-empty | yes |
+| `deviceType` | `"ANDROID"` \| `"IOS"` | only if `deviceToken` is set |
+| `deviceToken` | string, non-empty (FCM push token) | only if `deviceType` is set |
+
+`deviceType`/`deviceToken` are optional but must be given together — omit
+both for a session with no push notifications, or send both to register this
+login for push (e.g. from the Flutter app). A `400` is returned if only one
+of the two is present.
 
 ```json
 // Request
-{ "email": "admin@transitops.dev", "password": "..." }
+{
+  "email": "admin@transitops.dev",
+  "password": "...",
+  "deviceType": "ANDROID",
+  "deviceToken": "fcm-token-abc123"
+}
 ```
 
 **Response 200**
@@ -112,7 +124,9 @@ No auth.
   "message": "OK",
   "data": {
     "accessToken": "eyJhbGciOi...",
+    "accessTokenExpiresAt": "2026-07-12T06:11:09.000Z",
     "refreshToken": "5c2e89cd...",
+    "refreshTokenExpiresAt": "2026-07-19T05:56:09.844Z",
     "user": {
       "id": "cmrhcmxt10000ntpb9nn55x6l",
       "name": "Admin",
@@ -122,6 +136,10 @@ No auth.
   }
 }
 ```
+
+`accessTokenExpiresAt`/`refreshTokenExpiresAt` are ISO 8601 timestamps —
+use them to know when to call `/refresh` rather than guessing from the
+`JWT_ACCESS_TTL`/`JWT_REFRESH_TTL_DAYS` config.
 
 **401** `"Invalid email or password"` — wrong password, unknown email, or
 deactivated account (same message for all three, on purpose).
@@ -134,6 +152,9 @@ No auth (the refresh token itself is the credential).
 |---|---|---|
 | `refreshToken` | string, non-empty | yes |
 
+No need to resend `deviceType`/`deviceToken` here — whatever was registered
+at login carries over automatically to the new refresh token.
+
 ```json
 // Request
 { "refreshToken": "5c2e89cd..." }
@@ -144,12 +165,18 @@ No auth (the refresh token itself is the credential).
 {
   "success": true,
   "message": "OK",
-  "data": { "accessToken": "eyJhbGciOi...", "refreshToken": "16ff0598..." }
+  "data": {
+    "accessToken": "eyJhbGciOi...",
+    "accessTokenExpiresAt": "2026-07-12T06:11:18.000Z",
+    "refreshToken": "16ff0598...",
+    "refreshTokenExpiresAt": "2026-07-19T05:56:18.545Z"
+  }
 }
 ```
 
 Note: the `refreshToken` you get back is a **new** one — the one you sent is
-revoked as part of this call. Store the new value and discard the old one.
+revoked as part of this call. Store the new value (and its new expiry) and
+discard the old one.
 
 **401** `"Invalid or expired refresh token"` — unknown, already-used, expired,
 or belongs to a deactivated user.

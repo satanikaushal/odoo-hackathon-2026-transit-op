@@ -31,6 +31,13 @@ Why an opaque refresh token instead of a second JWT: it needs to be revocable
 verification buys nothing — a random secret + hash lookup is simpler and
 avoids a second signing secret to manage.
 
+Both `/login` and `/refresh` return `accessTokenExpiresAt`/
+`refreshTokenExpiresAt` (ISO 8601 timestamps) alongside the tokens
+(`src/lib/jwt.ts: getAccessTokenExpiry()` decodes the JWT's own `exp` claim;
+the refresh expiry is the same `Date` used when writing the `RefreshToken`
+row). Clients should schedule their refresh off these values instead of
+hardcoding the `JWT_ACCESS_TTL`/`JWT_REFRESH_TTL_DAYS` config.
+
 ### Refresh rotation
 
 Every call to `POST /api/auth/refresh` **revokes the token it was given** and
@@ -45,6 +52,22 @@ Both operations are idempotent-ish: replaying an already-revoked or unknown
 token just gets 401 (refresh) or a silent 204 (logout) — the endpoint never
 reveals whether a token existed.
 
+### Device tokens (push notifications)
+
+`RefreshToken` optionally carries `deviceType` (`DeviceType` enum: `ANDROID` |
+`IOS`) and `deviceToken` (an FCM push token), set at login and left `null` if
+the caller didn't send them. Since a `RefreshToken` row already models one
+login session on one device, this is the natural place to store it — a user
+logged in on two phones has two `RefreshToken` rows, each with its own device
+token, and each can be revoked (logged out) independently.
+
+`refresh()` copies the device info from the token being rotated onto the new
+one, so the client only needs to send it once at login, not on every refresh.
+There's no endpoint yet to update a device token without a full re-login, or
+to query "all active device tokens for user X" for sending a push — both are
+straightforward additions on top of this table when push notifications are
+actually wired up (nothing sends anything today; this only stores the token).
+
 ## Endpoints
 
 All under `/api/auth`. None require CSRF handling (no cookies involved — pure
@@ -54,7 +77,12 @@ bearer tokens, so it works the same for a web client or the Flutter app).
 
 ```json
 // Request
-{ "email": "admin@transitops.dev", "password": "..." }
+{
+  "email": "admin@transitops.dev",
+  "password": "...",
+  "deviceType": "ANDROID",
+  "deviceToken": "fcm-token-abc123"
+}
 
 // 200 response
 {
@@ -62,11 +90,18 @@ bearer tokens, so it works the same for a web client or the Flutter app).
   "message": "OK",
   "data": {
     "accessToken": "eyJhbGciOi...",
+    "accessTokenExpiresAt": "2026-07-12T06:11:09.000Z",
     "refreshToken": "5c2e89cd...",
+    "refreshTokenExpiresAt": "2026-07-19T05:56:09.844Z",
     "user": { "id": "...", "name": "Admin", "email": "admin@transitops.dev", "role": "ADMIN" }
   }
 }
 ```
+
+`deviceType` (`"ANDROID"` | `"IOS"`) and `deviceToken` (an FCM push token) are
+optional, but must be provided together — `400` if only one is set. They're
+stored on the `RefreshToken` row created for this login (see Device tokens
+below), not returned in the response since the client already has them.
 
 401 with `"Invalid email or password"` for a wrong password, an unknown email,
 or a deactivated (`isActive: false`) user — deliberately the same message in
@@ -79,7 +114,16 @@ all three cases so the endpoint doesn't leak which emails are registered.
 { "refreshToken": "5c2e89cd..." }
 
 // 200 response
-{ "success": true, "message": "OK", "data": { "accessToken": "...", "refreshToken": "..." } }
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "accessToken": "...",
+    "accessTokenExpiresAt": "2026-07-12T06:11:18.000Z",
+    "refreshToken": "...",
+    "refreshTokenExpiresAt": "2026-07-19T05:56:18.545Z"
+  }
+}
 ```
 
 401 (`"Invalid or expired refresh token"`) if the token is unknown, revoked,
@@ -189,3 +233,5 @@ random values, not JWTs, so there's nothing to sign.
   a public network.
 - No multi-session visibility (e.g. "log out all devices") — logout only
   revokes the one refresh token it's given.
+- Device tokens are stored but nothing sends push notifications with them yet
+  — no FCM integration, no endpoint to look up a user's active device tokens.
