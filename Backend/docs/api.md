@@ -5,10 +5,10 @@ requirement, request body, and response shape. For the auth *system* itself
 (tokens, rotation, RBAC internals) see [`auth.md`](./auth.md) — this doc is
 just "what do I send, what do I get back."
 
-This file only documents what's actually implemented. Vehicles, drivers,
-trips, maintenance, fuel/expenses, dashboard, and reports are planned but not
-built yet — see `../PLAN.md` for the full roadmap. Update this file as each
-phase lands; don't let it drift from the code.
+This file only documents what's actually implemented. Drivers, trips,
+maintenance, fuel/expenses, dashboard, and reports are planned but not built
+yet — see `../PLAN.md` for the full roadmap. Update this file as each phase
+lands; don't let it drift from the code.
 
 ## Conventions
 
@@ -220,6 +220,122 @@ JWT payload).
 
 **401** — missing/invalid/expired access token, or the account was
 deactivated since the token was issued.
+
+---
+
+## Vehicles (`/api/vehicles`)
+
+The fleet's master vehicle list (brief §3.3). Full behavioral detail — status
+lifecycle, registration-number normalization, why deletes are blocked — is in
+[`vehicles.md`](./vehicles.md). Every endpoint requires a bearer token 🔒;
+writes require the `ADMIN` or `FLEET_MANAGER` role.
+
+**Vehicle object** (returned by every read and after create/update):
+
+```json
+{
+  "id": "cmrh...",
+  "registrationNumber": "MH12AB1234",
+  "name": "Tata Ace",
+  "type": "Truck",
+  "maxLoadCapacity": 1000,
+  "odometer": 0,
+  "acquisitionCost": "550000.50",
+  "status": "AVAILABLE",
+  "region": "West",
+  "createdAt": "2026-07-12T05:24:43.814Z",
+  "updatedAt": "2026-07-12T05:24:43.814Z"
+}
+```
+
+`status` is one of `AVAILABLE` \| `ON_TRIP` \| `IN_SHOP` \| `RETIRED`.
+`acquisitionCost` is a **string** (a `Decimal(12,2)`, string-encoded to keep
+precision). `registrationNumber` is always uppercase.
+
+### `GET /api/vehicles` 🔒
+
+List with optional filters + pagination. All query params optional.
+
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `status` | status enum | — | exact match |
+| `type` | string | — | exact match |
+| `region` | string | — | exact match |
+| `search` | string | — | case-insensitive substring of registration number or name |
+| `page` | int ≥ 1 | `1` | |
+| `limit` | int 1–100 | `20` | |
+
+**Response 200** — `data` is `{ items: Vehicle[], pagination }`:
+
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "items": [ /* Vehicle objects */ ],
+    "pagination": { "page": 1, "limit": 20, "total": 1, "totalPages": 1 }
+  }
+}
+```
+
+### `GET /api/vehicles/:id` 🔒
+
+`data` is the Vehicle object. **404** `"Vehicle not found"` if unknown.
+
+### `POST /api/vehicles` 🔒 ADMIN / FLEET_MANAGER
+
+| Field | Type | Required |
+|---|---|---|
+| `registrationNumber` | string (unique, uppercased) | yes |
+| `name` | string | yes |
+| `type` | string | yes |
+| `maxLoadCapacity` | number > 0 | yes |
+| `acquisitionCost` | number/string ≥ 0 | yes |
+| `odometer` | number ≥ 0 (default `0`) | no |
+| `status` | status enum (default `AVAILABLE`) | no |
+| `region` | string | no |
+
+```json
+// Request
+{
+  "registrationNumber": "MH12AB1234",
+  "name": "Tata Ace",
+  "type": "Truck",
+  "maxLoadCapacity": 1000,
+  "acquisitionCost": "550000.50",
+  "region": "West"
+}
+```
+
+**201** `"Vehicle created"`, `data` is the created Vehicle.
+**409** on a duplicate registration number.
+
+### `PATCH /api/vehicles/:id` 🔒 ADMIN / FLEET_MANAGER
+
+Partial update — any subset of the create fields (at least one required;
+empty body is `400`). `region` accepts `null` to clear it. **200**
+`"Vehicle updated"`. **404** if unknown, **409** on a duplicate registration
+number.
+
+### `PATCH /api/vehicles/:id/status` 🔒 ADMIN / FLEET_MANAGER
+
+| Field | Type | Required |
+|---|---|---|
+| `status` | status enum | yes |
+
+```json
+// Request
+{ "status": "IN_SHOP" }
+```
+
+**200** `"Vehicle status updated"`, `data` is the updated Vehicle. **404** if
+unknown.
+
+### `DELETE /api/vehicles/:id` 🔒 ADMIN / FLEET_MANAGER
+
+**204 No Content** on success. **404** if unknown. **409** if the vehicle is
+referenced by trips or logs — retire it (`status: "RETIRED"`) instead. See
+[`vehicles.md`](./vehicles.md#deletion).
 
 ---
 
