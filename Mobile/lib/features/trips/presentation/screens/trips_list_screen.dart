@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_gap.dart';
 import '../../../../shared/widgets/app_shimmer.dart';
 import '../../../../shared/widgets/app_text.dart';
+import '../../../../shared/widgets/refreshable_list.dart';
 import '../../application/trip_list_provider.dart';
 import '../../domain/trip_permissions.dart';
 import '../../domain/models/trip_status.dart';
@@ -69,19 +70,24 @@ class _TripsListScreenState extends ConsumerState<TripsListScreen> {
     Widget body;
 
     if (state.isInitialLoading && state.trips.isEmpty) {
-      body = ListView(
+      body = RefreshableList.scroll(
+        onRefresh: notifier.refresh,
         padding: Responsive.getPaddingSymmetric(horizontal: 16, vertical: 16),
         children: const [TripListShimmer()],
       );
     } else if (state.error != null &&
         state.trips.isEmpty &&
         !state.isRefreshingList) {
-      body = _TripsErrorView(
-        message: state.error!,
-        onRetry: notifier.refresh,
+      body = RefreshableList.centered(
+        onRefresh: notifier.refresh,
+        child: _TripsErrorView(
+          message: state.error!,
+          onRetry: notifier.refresh,
+        ),
       );
     } else {
-      body = ListView(
+      body = RefreshableList.scroll(
+        onRefresh: notifier.refresh,
         controller: _scrollController,
         padding: Responsive.getPaddingSymmetric(horizontal: 16, vertical: 16),
         children: [

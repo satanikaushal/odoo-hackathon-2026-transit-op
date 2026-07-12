@@ -56,6 +56,7 @@ class DashboardFiltersSection extends StatelessWidget {
                 value: selectedStatus,
                 items: options.statuses,
                 onChanged: onStatusChanged,
+                formatItemLabel: (item) => item.replaceAll('_', ' '),
               ),
             ),
           ],
@@ -78,12 +79,14 @@ class _FilterDropdown extends StatelessWidget {
     required this.value,
     required this.items,
     required this.onChanged,
+    this.formatItemLabel,
   });
 
   final String label;
   final String? value;
   final List<String> items;
   final ValueChanged<String?> onChanged;
+  final String Function(String item)? formatItemLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +121,7 @@ class _FilterDropdown extends StatelessWidget {
             ...items.map(
               (item) => DropdownMenuItem<String?>(
                 value: item,
-                child: Text(item),
+                child: Text(formatItemLabel?.call(item) ?? item),
               ),
             ),
           ],

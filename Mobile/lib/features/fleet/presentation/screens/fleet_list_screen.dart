@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_gap.dart';
 import '../../../../shared/widgets/app_shimmer.dart';
 import '../../../../shared/widgets/app_text.dart';
+import '../../../../shared/widgets/refreshable_list.dart';
 import '../../application/fleet_list_provider.dart';
 import '../../domain/fleet_permissions.dart';
 import '../../domain/models/vehicle_status.dart';
@@ -69,17 +70,22 @@ class _FleetListScreenState extends ConsumerState<FleetListScreen> {
     Widget body;
 
     if (state.isInitialLoading && state.vehicles.isEmpty) {
-      body = ListView(
+      body = RefreshableList.scroll(
+        onRefresh: notifier.refresh,
         padding: Responsive.getPaddingSymmetric(horizontal: 16, vertical: 16),
         children: const [FleetListShimmer()],
       );
     } else if (state.error != null && state.vehicles.isEmpty && !state.isRefreshingList) {
-      body = _FleetErrorView(
-        message: state.error!,
-        onRetry: notifier.refresh,
+      body = RefreshableList.centered(
+        onRefresh: notifier.refresh,
+        child: _FleetErrorView(
+          message: state.error!,
+          onRetry: notifier.refresh,
+        ),
       );
     } else {
-      body = ListView(
+      body = RefreshableList.scroll(
+        onRefresh: notifier.refresh,
         controller: _scrollController,
         padding: Responsive.getPaddingSymmetric(horizontal: 16, vertical: 16),
         children: [

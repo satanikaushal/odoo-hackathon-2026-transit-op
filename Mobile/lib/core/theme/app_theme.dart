@@ -120,6 +120,10 @@ abstract final class AppTheme {
         }),
       ),
       dividerTheme: DividerThemeData(color: border),
+      tabBarTheme: const TabBarThemeData(
+        dividerColor: Colors.transparent,
+        dividerHeight: 0,
+      ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: surfaceVariant,
         contentTextStyle: TextStyle(color: textPrimary),

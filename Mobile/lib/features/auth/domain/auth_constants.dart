@@ -5,6 +5,6 @@ abstract final class AuthConstants {
 
 /// Dev/staging login shortcuts — never used in release builds.
 abstract final class DevAuthCredentials {
-  static const email = 'admin@transitops.dev';
-  static const password = 'TzcqObs0sy8jkhTL';
+  static const email = '';
+  static const password = '';
 }

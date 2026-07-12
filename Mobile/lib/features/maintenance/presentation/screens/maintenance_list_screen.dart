@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_gap.dart';
 import '../../../../shared/widgets/app_shimmer.dart';
 import '../../../../shared/widgets/app_text.dart';
+import '../../../../shared/widgets/refreshable_list.dart';
 import '../../application/maintenance_list_provider.dart';
 import '../../domain/maintenance_permissions.dart';
 import '../../domain/models/maintenance_status.dart';
@@ -68,19 +69,24 @@ class _MaintenanceListScreenState extends ConsumerState<MaintenanceListScreen> {
     Widget body;
 
     if (state.isInitialLoading && state.logs.isEmpty) {
-      body = ListView(
+      body = RefreshableList.scroll(
+        onRefresh: notifier.refresh,
         padding: Responsive.getPaddingSymmetric(horizontal: 16, vertical: 16),
         children: const [MaintenanceListShimmer()],
       );
     } else if (state.error != null &&
         state.logs.isEmpty &&
         !state.isRefreshingList) {
-      body = _MaintenanceErrorView(
-        message: state.error!,
-        onRetry: notifier.refresh,
+      body = RefreshableList.centered(
+        onRefresh: notifier.refresh,
+        child: _MaintenanceErrorView(
+          message: state.error!,
+          onRetry: notifier.refresh,
+        ),
       );
     } else {
-      body = ListView(
+      body = RefreshableList.scroll(
+        onRefresh: notifier.refresh,
         controller: _scrollController,
         padding: Responsive.getPaddingSymmetric(horizontal: 16, vertical: 16),
         children: [

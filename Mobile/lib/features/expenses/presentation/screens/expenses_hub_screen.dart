@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_gap.dart';
 import '../../../../shared/widgets/app_shimmer.dart';
 import '../../../../shared/widgets/app_text.dart';
+import '../../../../shared/widgets/refreshable_list.dart';
 import '../../application/expense_list_provider.dart';
 import '../../application/fuel_log_list_provider.dart';
 import '../../domain/expenses_permissions.dart';
@@ -216,7 +217,8 @@ class _FuelLogsTab extends ConsumerWidget {
     final notifier = ref.read(fuelLogListProvider.notifier);
 
     if (state.isInitialLoading && state.logs.isEmpty) {
-      return ListView(
+      return RefreshableList.scroll(
+        onRefresh: notifier.refresh,
         padding: Responsive.getPaddingSymmetric(horizontal: 16, vertical: 16),
         children: const [ExpensesListShimmer()],
       );
@@ -225,10 +227,14 @@ class _FuelLogsTab extends ConsumerWidget {
     if (state.error != null &&
         state.logs.isEmpty &&
         !state.isRefreshingList) {
-      return _ErrorView(message: state.error!, onRetry: notifier.refresh);
+      return RefreshableList.centered(
+        onRefresh: notifier.refresh,
+        child: _ErrorView(message: state.error!, onRetry: notifier.refresh),
+      );
     }
 
-    return ListView(
+    return RefreshableList.scroll(
+      onRefresh: notifier.refresh,
       controller: scrollController,
       padding: Responsive.getPaddingSymmetric(horizontal: 16, vertical: 16),
       children: [
@@ -270,7 +276,8 @@ class _ExpensesTab extends ConsumerWidget {
     final notifier = ref.read(expenseListProvider.notifier);
 
     if (state.isInitialLoading && state.expenses.isEmpty) {
-      return ListView(
+      return RefreshableList.scroll(
+        onRefresh: notifier.refresh,
         padding: Responsive.getPaddingSymmetric(horizontal: 16, vertical: 16),
         children: const [ExpensesListShimmer()],
       );
@@ -279,10 +286,14 @@ class _ExpensesTab extends ConsumerWidget {
     if (state.error != null &&
         state.expenses.isEmpty &&
         !state.isRefreshingList) {
-      return _ErrorView(message: state.error!, onRetry: notifier.refresh);
+      return RefreshableList.centered(
+        onRefresh: notifier.refresh,
+        child: _ErrorView(message: state.error!, onRetry: notifier.refresh),
+      );
     }
 
-    return ListView(
+    return RefreshableList.scroll(
+      onRefresh: notifier.refresh,
       controller: scrollController,
       padding: Responsive.getPaddingSymmetric(horizontal: 16, vertical: 16),
       children: [

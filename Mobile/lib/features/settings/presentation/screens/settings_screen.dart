@@ -60,7 +60,7 @@ class SettingsScreen extends ConsumerWidget {
                     Responsive.horizontalGap(14),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AppText(
                             user.name,
@@ -73,22 +73,27 @@ class SettingsScreen extends ConsumerWidget {
                             size: 13,
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
-                          Responsive.verticalGap(8),
-                          Container(
-                            padding: Responsive.getPaddingSymmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
+                          Responsive.verticalGap(10),
+                          DecoratedBox(
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.12),
+                              color: AppColors.primary.withValues(alpha: 0.08),
                               borderRadius:
-                                  BorderRadius.circular(Responsive.getR(6)),
+                                  BorderRadius.circular(Responsive.getR(20)),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.22),
+                              ),
                             ),
-                            child: AppText(
-                              user.role.label.toUpperCase(),
-                              size: 10,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
+                            child: Padding(
+                              padding: Responsive.getPaddingSymmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              child: AppText(
+                                user.role.label,
+                                size: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
                             ),
                           ),
                         ],
