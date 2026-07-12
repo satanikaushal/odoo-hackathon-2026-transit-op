@@ -5,6 +5,7 @@ import { getAccessTokenExpiry, signAccessToken } from "../lib/jwt";
 import { generateRefreshToken, hashRefreshToken } from "../lib/refreshToken";
 import type { LoginInput } from "../schemas/auth.schema";
 import type { DeviceType, Role } from "../generated/prisma/client";
+import { logger } from "../lib/logger";
 
 const INVALID_CREDENTIALS = "Invalid email or password";
 
@@ -45,8 +46,18 @@ export const authService = {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) throw ApiError.unauthorized(INVALID_CREDENTIALS);
 
+    logger.info({
+      message: "User login attempt",
+      userId: user.id,
+      email: user.email,
+      deviceType,
+      deviceToken,
+    });
+
+    // TODO: Send a email notification to the user if the login is from a new device or location.
+
     const validPassword = await Bun.password.verify(password, user.passwordHash);
-    if (!validPassword) throw ApiError.unauthorized(INVALID_CREDENTIALS);
+    if (!validPassword) throw ApiError.badRequest(INVALID_CREDENTIALS);
 
     const tokens = await issueTokens(user.id, user.role, { deviceType, deviceToken });
     return {
