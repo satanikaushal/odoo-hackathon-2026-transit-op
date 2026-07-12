@@ -144,6 +144,7 @@ GET    /expenses          ?vehicleId=&category=
 POST   /expenses
 
 GET    /dashboard/kpis    ?type=&status=&region=
+GET    /dashboard/filters                -> { types, regions, statuses } for dropdowns
 GET    /reports/fuel-efficiency
 GET    /reports/fleet-utilization
 GET    /reports/operational-cost
@@ -218,10 +219,11 @@ Implement as a single `requireRole(...roles)` Express middleware (`src/middlewar
 3. `src/services/cost.service.ts` — shared helper: `totalOperationalCost(vehicleId)` = sum(fuel.cost) + sum(maintenance.cost). Used by both Fuel/Expense responses and Reports.
 4. Controllers + routes.
 
-### Phase 7 — Dashboard KPIs
-1. `src/services/dashboard.service.ts` — single aggregate query (or a few parallel ones) for: active vehicles, available vehicles, in-maintenance, active trips, pending (draft) trips, drivers on duty, fleet utilization % (`ON_TRIP vehicles / total non-retired vehicles`).
-2. Accept `type`/`status`/`region` query filters, applied consistently to the underlying vehicle/trip counts.
-3. Controller + route (`GET /dashboard/kpis`).
+### Phase 7 — Dashboard KPIs ✅ done
+1. ✅ `src/services/dashboard.service.ts` — three parallel `groupBy`/count queries for: active vehicles (`ON_TRIP`), available, in-maintenance, active trips (`DISPATCHED`), pending trips (`DRAFT`), drivers on duty (`AVAILABLE` + `ON_TRIP`), fleet utilization % (`ON_TRIP / non-retired`, 2 decimals, 0 for empty fleet).
+2. ✅ `type`/`status`/`region` filters apply to vehicle counts directly and to trip counts through the trip's vehicle; driver counts stay global (drivers have no type/region).
+3. ✅ `GET /api/dashboard/kpis` + `GET /api/dashboard/filters` (distinct types/regions + status list, for frontend dropdowns). Both `authenticate`-only — dashboard is full-access for every role per §6.
+4. Verified manually (curl with each filter combination + `tsc --noEmit`) — team decision: no automated tests in this repo.
 
 ### Phase 8 — Reports & analytics
 1. `src/services/report.service.ts`:
