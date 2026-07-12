@@ -8,17 +8,20 @@ bun install
 
 ## Database
 
-No Docker or local Postgres install needed — Prisma can run a local Postgres
-for you:
+Real Postgres 16 in Docker (we tried `bunx prisma dev`'s embedded PGlite
+server first — it kept corrupting its prepared-statement state under
+concurrent connections and eventually broke `migrate reset` entirely; a real
+Postgres doesn't have that problem):
 
 ```bash
-bunx prisma dev --detach   # starts a local Postgres, prints connection URLs
+docker compose up -d   # starts Postgres + creates the shadow DB, both on first boot
 ```
 
-Copy `.env.example` to `.env` and fill in `DATABASE_URL`/`SHADOW_DATABASE_URL`
-with the **raw TCP** URLs `prisma dev` prints (`bunx prisma dev ls` to see them
-again) — not the `prisma+postgres://` proxy URL `prisma init` generates by
-default, which doesn't reliably support `migrate dev` in this setup.
+This creates two databases in the same container: `transitops` (the real one)
+and `transitops_shadow` (empty, only used by `prisma migrate dev` to compute
+diffs — created automatically by `docker/init-shadow-db.sql` the first time
+the container starts). `.env.example` already has matching connection strings
+— copy it to `.env` as-is, nothing to fill in.
 
 Then apply migrations and seed some users:
 
@@ -32,8 +35,6 @@ bun run db:seed      # creates one user per role, each with a random password pr
 1. Edit `prisma/schema.prisma`.
 2. `bun run db:migrate` — creates a new file under `prisma/migrations/` and applies it. Commit that folder.
 3. Teammates pulling your change run `bun run db:deploy` (applies pending migrations, no prompts — safe for CI/teammates) instead of `db:migrate`.
-
-If `db:migrate` ever fails on the shadow database (a PGlite quirk we hit once), fall back to `bun run db:push` to sync the schema directly, then hand-write the migration SQL with `bunx prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script` and `prisma migrate resolve --applied <name>` to record it.
 
 Other useful commands:
 

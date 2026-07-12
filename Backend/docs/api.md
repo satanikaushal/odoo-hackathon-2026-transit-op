@@ -99,10 +99,22 @@ No auth.
 |---|---|---|
 | `email` | string, valid email | yes |
 | `password` | string, non-empty | yes |
+| `deviceType` | `"ANDROID"` \| `"IOS"` | only if `deviceToken` is set |
+| `deviceToken` | string, non-empty (FCM push token) | only if `deviceType` is set |
+
+`deviceType`/`deviceToken` are optional but must be given together — omit
+both for a session with no push notifications, or send both to register this
+login for push (e.g. from the Flutter app). A `400` is returned if only one
+of the two is present.
 
 ```json
 // Request
-{ "email": "admin@transitops.dev", "password": "..." }
+{
+  "email": "admin@transitops.dev",
+  "password": "...",
+  "deviceType": "ANDROID",
+  "deviceToken": "fcm-token-abc123"
+}
 ```
 
 **Response 200**
@@ -112,7 +124,9 @@ No auth.
   "message": "OK",
   "data": {
     "accessToken": "eyJhbGciOi...",
+    "accessTokenExpiresAt": "2026-07-12T06:11:09.000Z",
     "refreshToken": "5c2e89cd...",
+    "refreshTokenExpiresAt": "2026-07-19T05:56:09.844Z",
     "user": {
       "id": "cmrhcmxt10000ntpb9nn55x6l",
       "name": "Admin",
@@ -122,6 +136,10 @@ No auth.
   }
 }
 ```
+
+`accessTokenExpiresAt`/`refreshTokenExpiresAt` are ISO 8601 timestamps —
+use them to know when to call `/refresh` rather than guessing from the
+`JWT_ACCESS_TTL`/`JWT_REFRESH_TTL_DAYS` config.
 
 **401** `"Invalid email or password"` — wrong password, unknown email, or
 deactivated account (same message for all three, on purpose).
@@ -134,6 +152,9 @@ No auth (the refresh token itself is the credential).
 |---|---|---|
 | `refreshToken` | string, non-empty | yes |
 
+No need to resend `deviceType`/`deviceToken` here — whatever was registered
+at login carries over automatically to the new refresh token.
+
 ```json
 // Request
 { "refreshToken": "5c2e89cd..." }
@@ -144,12 +165,18 @@ No auth (the refresh token itself is the credential).
 {
   "success": true,
   "message": "OK",
-  "data": { "accessToken": "eyJhbGciOi...", "refreshToken": "16ff0598..." }
+  "data": {
+    "accessToken": "eyJhbGciOi...",
+    "accessTokenExpiresAt": "2026-07-12T06:11:18.000Z",
+    "refreshToken": "16ff0598...",
+    "refreshTokenExpiresAt": "2026-07-19T05:56:18.545Z"
+  }
 }
 ```
 
 Note: the `refreshToken` you get back is a **new** one — the one you sent is
-revoked as part of this call. Store the new value and discard the old one.
+revoked as part of this call. Store the new value (and its new expiry) and
+discard the old one.
 
 **401** `"Invalid or expired refresh token"` — unknown, already-used, expired,
 or belongs to a deactivated user.
@@ -196,89 +223,119 @@ deactivated since the token was issued.
 
 ---
 
-## Drivers (`/api/drivers`) 🔒
+## Vehicles (`/api/vehicles`)
 
-Driver profiles (name, license, safety score, status) that get assigned to
-trips. These are operational records, **not** login accounts — see the naming
-note in `../PLAN.md` §2.
+The fleet's master vehicle list (brief §3.3). Full behavioral detail — status
+lifecycle, registration-number normalization, why deletes are blocked — is in
+[`vehicles.md`](./vehicles.md). Every endpoint requires a bearer token 🔒;
+writes require the `ADMIN` or `FLEET_MANAGER` role.
 
-**Every endpoint requires a valid access token.** Reading (`GET`) is open to
-any authenticated role. Writing (`POST`/`PATCH`/`DELETE`) is restricted to
-`FLEET_MANAGER`, `SAFETY_OFFICER`, and `ADMIN` per the RBAC matrix
-(`../PLAN.md` §6); other roles get `403`.
-
-A driver object:
+**Vehicle object** (returned by every read and after create/update):
 
 ```json
 {
-  "id": "cmrhd0000driver0001",
-  "name": "Jane Doe",
-  "licenseNumber": "DL-0451-2027",
-  "licenseCategory": "LMV",
-  "licenseExpiryDate": "2027-05-01T00:00:00.000Z",
-  "contactNumber": "+91-9876543210",
-  "safetyScore": 100,
+  "id": "cmrh...",
+  "registrationNumber": "MH12AB1234",
+  "name": "Tata Ace",
+  "type": "Truck",
+  "maxLoadCapacity": 1000,
+  "odometer": 0,
+  "acquisitionCost": "550000.50",
   "status": "AVAILABLE",
+  "region": "West",
   "createdAt": "2026-07-12T05:24:43.814Z",
   "updatedAt": "2026-07-12T05:24:43.814Z"
 }
 ```
 
-`status` is one of `AVAILABLE`, `ON_TRIP`, `OFF_DUTY`, `SUSPENDED`.
+`status` is one of `AVAILABLE` \| `ON_TRIP` \| `IN_SHOP` \| `RETIRED`.
+`acquisitionCost` is a **string** (a `Decimal(12,2)`, string-encoded to keep
+precision). `registrationNumber` is always uppercase.
 
-### `GET /api/drivers` 🔒
+### `GET /api/vehicles` 🔒
 
-List drivers, newest first. Optional filters:
+List with optional filters + pagination. All query params optional.
 
-| Query | Type | Effect |
-|---|---|---|
-| `status` | one of the `DriverStatus` values | exact-match filter |
-| `q` | string | case-insensitive substring match on name / license number / contact number |
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `status` | status enum | — | exact match |
+| `type` | string | — | exact match |
+| `region` | string | — | exact match |
+| `search` | string | — | case-insensitive substring of registration number or name |
+| `page` | int ≥ 1 | `1` | |
+| `limit` | int 1–100 | `20` | |
 
-**Response 200**: `data` is an array of driver objects.
+**Response 200** — `data` is `{ items: Vehicle[], pagination }`:
 
-### `POST /api/drivers` 🔒 (write roles)
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "items": [ /* Vehicle objects */ ],
+    "pagination": { "page": 1, "limit": 20, "total": 1, "totalPages": 1 }
+  }
+}
+```
+
+### `GET /api/vehicles/:id` 🔒
+
+`data` is the Vehicle object. **404** `"Vehicle not found"` if unknown.
+
+### `POST /api/vehicles` 🔒 ADMIN / FLEET_MANAGER
 
 | Field | Type | Required |
 |---|---|---|
-| `name` | string, non-empty | yes |
-| `licenseNumber` | string, non-empty, **unique** | yes |
-| `licenseCategory` | string, non-empty | yes |
-| `licenseExpiryDate` | date (ISO string, e.g. `2027-05-01`) | yes |
-| `contactNumber` | string, non-empty | yes |
-| `safetyScore` | number `0`–`100` | no (defaults to `100`) |
-| `status` | `DriverStatus` | no (defaults to `AVAILABLE`) |
+| `registrationNumber` | string (unique, uppercased) | yes |
+| `name` | string | yes |
+| `type` | string | yes |
+| `maxLoadCapacity` | number > 0 | yes |
+| `acquisitionCost` | number/string ≥ 0 | yes |
+| `odometer` | number ≥ 0 (default `0`) | no |
+| `status` | status enum (default `AVAILABLE`) | no |
+| `region` | string | no |
 
-**Response 201**: the created driver object.
+```json
+// Request
+{
+  "registrationNumber": "MH12AB1234",
+  "name": "Tata Ace",
+  "type": "Truck",
+  "maxLoadCapacity": 1000,
+  "acquisitionCost": "550000.50",
+  "region": "West"
+}
+```
 
-**409** `"A driver with this license number already exists"` — duplicate
-`licenseNumber`.
+**201** `"Vehicle created"`, `data` is the created Vehicle.
+**409** on a duplicate registration number.
 
-### `GET /api/drivers/:id` 🔒
+### `PATCH /api/vehicles/:id` 🔒 ADMIN / FLEET_MANAGER
 
-**Response 200**: the driver object. **404** `"Driver not found"`.
+Partial update — any subset of the create fields (at least one required;
+empty body is `400`). `region` accepts `null` to clear it. **200**
+`"Vehicle updated"`. **404** if unknown, **409** on a duplicate registration
+number.
 
-### `PATCH /api/drivers/:id` 🔒 (write roles)
+### `PATCH /api/vehicles/:id/status` 🔒 ADMIN / FLEET_MANAGER
 
-Partial update — send any subset of the `POST` body fields (at least one; an
-empty body is rejected with `400`).
+| Field | Type | Required |
+|---|---|---|
+| `status` | status enum | yes |
 
-**Response 200**: the updated driver object.
+```json
+// Request
+{ "status": "IN_SHOP" }
+```
 
-**404** `"Driver not found"`. **409** duplicate `licenseNumber` (same message
-as `POST`).
+**200** `"Vehicle status updated"`, `data` is the updated Vehicle. **404** if
+unknown.
 
-### `DELETE /api/drivers/:id` 🔒 (write roles)
+### `DELETE /api/vehicles/:id` 🔒 ADMIN / FLEET_MANAGER
 
-Hard-delete a driver.
-
-**Response**: `204 No Content`.
-
-**404** `"Driver not found"`.
-
-**409** `"Driver has associated trips and cannot be deleted; set status to
-SUSPENDED or OFF_DUTY instead"` — a driver referenced by any trip can't be
-deleted (the trip history must stay intact); change their `status` instead.
+**204 No Content** on success. **404** if unknown. **409** if the vehicle is
+referenced by trips or logs — retire it (`status: "RETIRED"`) instead. See
+[`vehicles.md`](./vehicles.md#deletion).
 
 ---
 
