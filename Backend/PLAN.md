@@ -236,15 +236,15 @@ Implement as a single `requireRole(...roles)` Express middleware (`src/middlewar
 
 ### Phase 9 — Hardening & cross-cutting
 1. Ensure every mutating endpoint runs its multi-table writes inside `prisma.$transaction`.
-2. Centralize Prisma error → `ApiError` mapping in `errorHandler.ts` (P2002 unique, P2025 not-found, etc.) instead of scattering `try/catch` in every service.
+2. ✅ Centralize Prisma error → `ApiError` mapping in `errorHandler.ts` (P2002 → 409 naming the violated fields, P2025 → 404, P2003 → 409). Per-call `try/catch` removed from vehicle/driver services; vehicle `remove()` keeps its own P2003 catch on purpose (its message points at the RETIRED alternative). Note: with the pg driver adapter, violated columns live at `meta.driverAdapterError.cause.constraint.fields`, not `meta.target`.
 3. Pagination (`page`/`pageSize`) on all list endpoints — brief implies growing tables (trips/logs).
 4. `bun test` coverage for: RBAC denial, trip state machine (happy path + every rule in §4), maintenance status side-effects, ROI/fuel-efficiency math.
 
 ### Phase 10 — Bonus features (time-permitting, in priority order)
-1. **Search/filter/sort** — extend list-endpoint query schemas (`q`, `sortBy`, `sortDir`) — cheap, high value, do this before the flashier bonuses.
+1. ✅ **Search/filter/sort** — `sortBy`/`sortDir` (whitelisted columns) on vehicles, drivers, trips, maintenance list endpoints; search/filters were already in. Extend to fuel-log/expense lists when Phase 6 endpoints exist.
 2. **License-expiry email reminders** — `node-cron` job (daily) scanning `Driver.licenseExpiryDate` within N days, `nodemailer`/`resend` to send. Put the cron bootstrap in its own `src/jobs/licenseReminder.job.ts`, started from `index.ts`, not buried in `app.ts`.
-3. **PDF export** — mirror the CSV export path with `pdfkit`, same report-service functions.
-4. **Vehicle document management** — new `VehicleDocument` entity (vehicleId, type, fileUrl, expiryDate?) + file upload (local disk for hackathon speed, or S3-compatible if time allows).
+3. ✅ **PDF export** — `GET /reports/export.pdf?report=<name>` (pdfkit, `src/lib/pdf.ts`); same `buildReportTable` + report-service functions as the CSV path.
+4. ✅ **Vehicle document management** — `VehicleDocument` entity + `GET/POST /vehicles/:id/documents`, `DELETE /vehicles/:id/documents/:documentId`. Multer upload to local `uploads/` (gitignored, served at `/uploads`, UUID filenames, 5MB cap, pdf/png/jpg/webp only).
 5. Charts/dark mode are frontend concerns, not backend — no action needed here beyond exposing the data the frontend needs (already covered by Phases 7–8).
 
 ## 8. Open questions to confirm with the team/judges

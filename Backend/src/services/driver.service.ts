@@ -1,14 +1,10 @@
-import { Prisma } from "../generated/prisma/client";
+import type { Prisma } from "../generated/prisma/client";
 import { prisma } from "../lib/prisma";
 import { ApiError } from "../lib/ApiError";
 import type { CreateDriverInput, ListDriversQuery, UpdateDriverInput } from "../schemas/driver.schema";
 
-const DUPLICATE_LICENSE = "A driver with this license number already exists";
-
-// P2002 = unique constraint violation (only `licenseNumber` is unique on Driver).
-function isUniqueViolation(err: unknown): boolean {
-  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
-}
+// Duplicate licenseNumber (P2002) is mapped centrally in errorHandler.ts
+// (PLAN.md §9.2) — no per-call try/catch needed here.
 
 export const driverService = {
   async list({ status, q, sortBy, sortDir }: ListDriversQuery) {
@@ -34,22 +30,12 @@ export const driverService = {
   },
 
   async create(input: CreateDriverInput) {
-    try {
-      return await prisma.driver.create({ data: input });
-    } catch (err) {
-      if (isUniqueViolation(err)) throw ApiError.conflict(DUPLICATE_LICENSE);
-      throw err;
-    }
+    return prisma.driver.create({ data: input });
   },
 
   async update(id: string, input: UpdateDriverInput) {
     await driverService.getById(id); // 404 if the driver doesn't exist
-    try {
-      return await prisma.driver.update({ where: { id }, data: input });
-    } catch (err) {
-      if (isUniqueViolation(err)) throw ApiError.conflict(DUPLICATE_LICENSE);
-      throw err;
-    }
+    return prisma.driver.update({ where: { id }, data: input });
   },
 
   async remove(id: string) {

@@ -8,8 +8,8 @@ import type {
 } from "../schemas/vehicle.schema";
 import type { VehicleStatus } from "../generated/prisma/enums";
 
-// Prisma known-request error codes we care about here.
-const UNIQUE_VIOLATION = "P2002";
+// P2003 = foreign-key violation. Unique violations (P2002) are mapped
+// centrally in errorHandler.ts (PLAN.md §9.2).
 const FK_VIOLATION = "P2003";
 
 function hasCode(error: unknown): error is { code: string } {
@@ -18,16 +18,7 @@ function hasCode(error: unknown): error is { code: string } {
 
 export const vehicleService = {
   async create(input: CreateVehicleInput) {
-    try {
-      return await prisma.vehicle.create({ data: input });
-    } catch (error) {
-      if (hasCode(error) && error.code === UNIQUE_VIOLATION) {
-        throw ApiError.conflict(
-          `A vehicle with registration number "${input.registrationNumber}" already exists`,
-        );
-      }
-      throw error;
-    }
+    return prisma.vehicle.create({ data: input });
   },
 
   async list(query: ListVehiclesQuery) {
@@ -70,17 +61,7 @@ export const vehicleService = {
   async update(id: string, input: UpdateVehicleInput) {
     // Surface a clean 404 rather than Prisma's P2025 on a missing record.
     await this.getById(id);
-
-    try {
-      return await prisma.vehicle.update({ where: { id }, data: input });
-    } catch (error) {
-      if (hasCode(error) && error.code === UNIQUE_VIOLATION) {
-        throw ApiError.conflict(
-          `A vehicle with registration number "${input.registrationNumber}" already exists`,
-        );
-      }
-      throw error;
-    }
+    return prisma.vehicle.update({ where: { id }, data: input });
   },
 
   async updateStatus(id: string, status: VehicleStatus) {
@@ -93,6 +74,8 @@ export const vehicleService = {
     try {
       await prisma.vehicle.delete({ where: { id } });
     } catch (error) {
+      // Deliberately overrides the central P2003 mapping: this one can point
+      // the caller at the supported alternative (retire, don't delete).
       if (hasCode(error) && error.code === FK_VIOLATION) {
         throw ApiError.conflict(
           "Vehicle has related trips or logs and cannot be deleted; set its status to RETIRED instead",

@@ -43,6 +43,8 @@ export function createApp() {
     }),
   );
   app.use(express.json());
+  // Uploaded vehicle documents (public read — filenames are unguessable UUIDs).
+  app.use("/uploads", express.static("uploads"));
   app.use(router);
 
   app.use(notFound);

@@ -101,6 +101,7 @@ model Vehicle {
   maintenanceLogs     MaintenanceLog[]
   fuelLogs            FuelLog[]
   expenses            Expense[]
+  documents          VehicleDocument[]
 
   @@index([status])
   @@index([type])
@@ -157,6 +158,21 @@ model Trip {
   @@index([status])
   @@index([vehicleId])
   @@index([driverId])
+}
+
+// Uploaded paperwork for a vehicle (registration cert, insurance, permit, …).
+// Files live on local disk under uploads/; fileUrl is the public path served
+// by express.static.
+model VehicleDocument {
+  id         String    @id @default(cuid())
+  vehicleId  String
+  vehicle    Vehicle   @relation(fields: [vehicleId], references: [id])
+  type       String
+  fileUrl    String
+  expiryDate DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([vehicleId])
 }
 
 model MaintenanceLog {

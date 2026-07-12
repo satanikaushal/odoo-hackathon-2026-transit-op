@@ -8,8 +8,14 @@ import {
   updateVehicle,
   updateVehicleStatus,
 } from "../controllers/vehicle.controller";
+import {
+  deleteVehicleDocument,
+  listVehicleDocuments,
+  uploadVehicleDocument,
+} from "../controllers/vehicleDocument.controller";
 import { authenticate } from "../middleware/authenticate";
 import { authorize } from "../middleware/authorize";
+import { uploadDocumentFile } from "../middleware/upload";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate";
 import { Role } from "../generated/prisma/enums";
 import {
@@ -19,6 +25,10 @@ import {
   updateVehicleStatusSchema,
   vehicleIdParamsSchema,
 } from "../schemas/vehicle.schema";
+import {
+  uploadVehicleDocumentSchema,
+  vehicleDocumentParamsSchema,
+} from "../schemas/vehicleDocument.schema";
 
 export const vehicleRouter = Router();
 
@@ -51,3 +61,21 @@ vehicleRouter.patch(
 );
 
 vehicleRouter.delete("/:id", canManage, validateParams(vehicleIdParamsSchema), deleteVehicle);
+
+// Vehicle documents (registration cert, insurance, permit, …). Multer must run
+// before validateBody — multipart text fields only exist on req.body after it.
+vehicleRouter.get("/:id/documents", validateParams(vehicleIdParamsSchema), listVehicleDocuments);
+vehicleRouter.post(
+  "/:id/documents",
+  canManage,
+  validateParams(vehicleIdParamsSchema),
+  uploadDocumentFile,
+  validateBody(uploadVehicleDocumentSchema),
+  uploadVehicleDocument,
+);
+vehicleRouter.delete(
+  "/:id/documents/:documentId",
+  canManage,
+  validateParams(vehicleDocumentParamsSchema),
+  deleteVehicleDocument,
+);
