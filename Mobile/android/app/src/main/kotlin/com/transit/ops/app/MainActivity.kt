@@ -1,4 +1,4 @@
-package com.transit.op.app.transit_op
+package com.transit.ops.app
 
 import io.flutter.embedding.android.FlutterActivity
 
