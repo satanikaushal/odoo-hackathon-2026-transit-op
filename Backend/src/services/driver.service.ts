@@ -11,20 +11,32 @@ function isUniqueViolation(err: unknown): boolean {
 }
 
 export const driverService = {
-  async list({ status, q }: ListDriversQuery) {
-    return prisma.driver.findMany({
-      where: {
-        ...(status && { status }),
-        ...(q && {
-          OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { licenseNumber: { contains: q, mode: "insensitive" } },
-            { contactNumber: { contains: q } },
-          ],
-        }),
-      },
-      orderBy: { createdAt: "desc" },
-    });
+  async list({ status, q, page, limit }: ListDriversQuery) {
+    const where: Prisma.DriverWhereInput = {
+      ...(status && { status }),
+      ...(q && {
+        OR: [
+          { name: { contains: q, mode: "insensitive" } },
+          { licenseNumber: { contains: q, mode: "insensitive" } },
+          { contactNumber: { contains: q } },
+        ],
+      }),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.driver.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.driver.count({ where }),
+    ]);
+
+    return {
+      items,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   },
 
   async getById(id: string) {

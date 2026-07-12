@@ -31,5 +31,7 @@ export type DriverIdParam = z.infer<typeof driverIdParamSchema>;
 export const listDriversQuerySchema = z.object({
   status: z.enum(DriverStatus).optional(),
   q: z.string().trim().min(1).optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max(100).optional().default(20),
 });
 export type ListDriversQuery = z.infer<typeof listDriversQuerySchema>;

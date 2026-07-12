@@ -1,12 +1,11 @@
 import { prisma } from "../lib/prisma";
 import { ApiError } from "../lib/ApiError";
-import type { Prisma } from "../generated/prisma/client";
+import { Prisma, VehicleStatus } from "../generated/prisma/client";
 import type {
   CreateVehicleInput,
   ListVehiclesQuery,
   UpdateVehicleInput,
 } from "../schemas/vehicle.schema";
-import type { VehicleStatus } from "../generated/prisma/enums";
 
 // Prisma known-request error codes we care about here.
 const UNIQUE_VIOLATION = "P2002";
@@ -65,6 +64,17 @@ export const vehicleService = {
     const vehicle = await prisma.vehicle.findUnique({ where: { id } });
     if (!vehicle) throw ApiError.notFound("Vehicle not found");
     return vehicle;
+  },
+
+  // The dispatch selection pool: only AVAILABLE vehicles are assignable. Returns
+  // the full pool (unpaginated) since it backs a picker, not a browse list —
+  // IN_SHOP / ON_TRIP / RETIRED vehicles are excluded here and rejected again at
+  // trip creation/dispatch (see trip.service.assertVehicleAssignable).
+  async listAvailableForDispatch() {
+    return prisma.vehicle.findMany({
+      where: { status: VehicleStatus.AVAILABLE },
+      orderBy: { registrationNumber: "asc" },
+    });
   },
 
   async update(id: string, input: UpdateVehicleInput) {

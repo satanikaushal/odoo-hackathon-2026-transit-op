@@ -278,6 +278,12 @@ List with optional filters + pagination. All query params optional.
 }
 ```
 
+### `GET /api/vehicles/available-for-dispatch` 🔒
+
+The dispatch selection pool: `data` is an array of every `AVAILABLE` vehicle
+(ordered by registration number), unpaginated since it backs a picker.
+`IN_SHOP` / `ON_TRIP` / `RETIRED` vehicles are excluded.
+
 ### `GET /api/vehicles/:id` 🔒
 
 `data` is the Vehicle object. **404** `"Vehicle not found"` if unknown.
