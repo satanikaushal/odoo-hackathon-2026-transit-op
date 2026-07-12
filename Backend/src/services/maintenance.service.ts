@@ -9,7 +9,7 @@ import type {
 type Tx = Prisma.TransactionClient;
 
 export const maintenanceService = {
-  async list({ vehicleId, status, page, limit }: ListMaintenanceQuery) {
+  async list({ vehicleId, status, sortBy, sortDir, page, limit }: ListMaintenanceQuery) {
     const where: Prisma.MaintenanceLogWhereInput = {
       ...(vehicleId && { vehicleId }),
       ...(status && { status }),
@@ -18,7 +18,7 @@ export const maintenanceService = {
     const [items, total] = await Promise.all([
       prisma.maintenanceLog.findMany({
         where,
-        orderBy: { openedAt: "desc" },
+        orderBy: { [sortBy]: sortDir } as Prisma.MaintenanceLogOrderByWithRelationInput,
         skip: (page - 1) * limit,
         take: limit,
         include: {

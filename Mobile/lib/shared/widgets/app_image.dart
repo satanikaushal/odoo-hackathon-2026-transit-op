@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../utils/responsive.dart';
+import 'app_shimmer.dart';
 
 class AppImage extends StatelessWidget {
   const AppImage._({
@@ -82,11 +83,11 @@ class AppImage extends StatelessWidget {
                 return child;
               }
               return placeholder ??
-                  SizedBox(
-                    width: imageWidth,
-                    height: imageHeight,
-                    child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  AppShimmer(
+                    child: AppShimmerBox(
+                      width: imageWidth,
+                      height: imageHeight,
+                      borderRadius: borderRadius ?? 8,
                     ),
                   );
             },

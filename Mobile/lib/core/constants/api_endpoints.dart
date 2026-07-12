@@ -6,7 +6,8 @@ abstract final class ApiEndpoints {
   static const authRefresh = '/auth/refresh';
   static const authMe = '/auth/me';
 
-  static const dashboard = '/dashboard';
+  static const dashboardKpis = '/dashboard/kpis';
+  static const dashboardFilters = '/dashboard/filters';
   static const vehicles = '/vehicles';
   static const drivers = '/drivers';
   static const trips = '/trips';

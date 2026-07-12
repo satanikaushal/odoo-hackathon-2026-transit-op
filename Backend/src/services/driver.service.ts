@@ -11,7 +11,7 @@ function isUniqueViolation(err: unknown): boolean {
 }
 
 export const driverService = {
-  async list({ status, q, page, limit }: ListDriversQuery) {
+  async list({ status, q, sortBy, sortDir, page, limit }: ListDriversQuery) {
     const where: Prisma.DriverWhereInput = {
       ...(status && { status }),
       ...(q && {
@@ -26,7 +26,7 @@ export const driverService = {
     const [items, total] = await Promise.all([
       prisma.driver.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: { [sortBy]: sortDir } as Prisma.DriverOrderByWithRelationInput,
         skip: (page - 1) * limit,
         take: limit,
       }),

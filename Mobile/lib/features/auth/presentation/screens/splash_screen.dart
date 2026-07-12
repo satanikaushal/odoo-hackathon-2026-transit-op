@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/app_environment.dart';
+import '../../../../shared/utils/responsive.dart';
+import '../../../../shared/widgets/app_gap.dart';
+import '../../../../shared/widgets/app_shimmer.dart';
 import '../../application/auth_session_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -39,8 +42,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               config.appName,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 24),
-            const CircularProgressIndicator(),
+            const AppGap(24),
+            AppShimmer(
+              child: Column(
+                children: [
+                  AppShimmerBox(
+                    width: Responsive.getW(160),
+                    height: Responsive.getH(12),
+                    borderRadius: 6,
+                  ),
+                  AppGap(10),
+                  AppShimmerBox(
+                    width: Responsive.getW(120),
+                    height: Responsive.getH(12),
+                    borderRadius: 6,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

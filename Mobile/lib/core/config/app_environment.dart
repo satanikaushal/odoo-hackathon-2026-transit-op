@@ -12,7 +12,7 @@ class AppEnvironment {
       Env.DEV => const AppConfig(
           env: Env.DEV,
           appName: 'TransitOps Dev',
-          baseUrl: 'https://phn4x8b8-3000.inc1.devtunnels.ms/api',
+          baseUrl: 'https://rnhnrsg9-3001.inc1.devtunnels.ms/api',
           enableLogging: true,
         ),
       Env.STAGING => const AppConfig(

@@ -51,7 +51,7 @@ function assertCargoWithinCapacity(cargoWeight: number, maxLoadCapacity: number)
 }
 
 export const tripService = {
-  async list({ status, vehicleId, driverId, search, page, limit }: ListTripsQuery) {
+  async list({ status, vehicleId, driverId, search, sortBy, sortDir, page, limit }: ListTripsQuery) {
     const where: Prisma.TripWhereInput = {
       ...(status && { status }),
       ...(vehicleId && { vehicleId }),
@@ -67,7 +67,7 @@ export const tripService = {
     const [items, total] = await Promise.all([
       prisma.trip.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: { [sortBy]: sortDir } as Prisma.TripOrderByWithRelationInput,
         skip: (page - 1) * limit,
         take: limit,
         include: {
