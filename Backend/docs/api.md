@@ -367,7 +367,9 @@ referenced by trips or logs — retire it (`status: "RETIRED"`) instead. See
 Fuel purchases and non-fuel operational expenses (tolls / misc) are recorded
 per vehicle, optionally attributed to a trip. Maintenance is **not** an expense
 category here — its costs live on the maintenance log so the operational-cost
-formula (fuel + maintenance) never double-counts.
+formula (fuel + maintenance) never double-counts. Full behavioral detail —
+the trip-must-match-vehicle rule, the `vehicle` summary on reads, why these
+are append-only — is in [`fuel-expenses.md`](./fuel-expenses.md).
 
 Money fields accept a number or numeric string and are stored with 2-decimal
 precision. A trip-attributed log must reference a trip that belongs to the same

@@ -81,6 +81,10 @@ model RefreshToken {
   revokedAt   DateTime?
   deviceType  DeviceType?
   deviceToken String?
+  // Where the session was created from. Used to detect logins from a new
+  // device (deviceToken / userAgent) or location (ipAddress) and notify the user.
+  ipAddress   String?
+  userAgent   String?
   createdAt   DateTime    @default(now())
 
   @@index([userId])
