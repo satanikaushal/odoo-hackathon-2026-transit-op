@@ -9,6 +9,11 @@ import { logger } from "../lib/logger";
 
 const INVALID_CREDENTIALS = "Invalid email or password";
 
+// Lock an account after this many consecutive failed login attempts.
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+// How long the account stays locked once the threshold is reached.
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
 interface DeviceInfo {
   deviceType?: DeviceType | null;
   deviceToken?: string | null;
@@ -46,6 +51,19 @@ export const authService = {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) throw ApiError.unauthorized(INVALID_CREDENTIALS);
 
+    // Account is currently locked out due to too many failed attempts.
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      logger.warn({
+        message: "Login attempt on locked account",
+        userId: user.id,
+        email: user.email,
+        lockedUntil: user.lockedUntil,
+      });
+      throw ApiError.forbidden(
+        "Account temporarily locked due to too many failed login attempts. Please try again later.",
+      );
+    }
+
     logger.info({
       message: "User login attempt",
       userId: user.id,
@@ -57,7 +75,42 @@ export const authService = {
     // TODO: Send a email notification to the user if the login is from a new device or location.
 
     const validPassword = await Bun.password.verify(password, user.passwordHash);
-    if (!validPassword) throw ApiError.badRequest(INVALID_CREDENTIALS);
+    if (!validPassword) {
+      const attempts = user.failedLoginAttempts + 1;
+      const shouldLock = attempts >= MAX_FAILED_LOGIN_ATTEMPTS;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: attempts,
+          lockedUntil: shouldLock ? new Date(Date.now() + LOCKOUT_DURATION_MS) : null,
+        },
+      });
+
+      if (shouldLock) {
+        logger.warn({
+          message: "Account locked after too many failed login attempts",
+          userId: user.id,
+          email: user.email,
+          attempts,
+        });
+        // TODO: Send a security email notifying the user that their account was
+        // locked due to repeated failed login attempts (include time, IP, device).
+        throw ApiError.forbidden(
+          "Account temporarily locked due to too many failed login attempts. Please try again later.",
+        );
+      }
+
+      throw ApiError.badRequest(INVALID_CREDENTIALS);
+    }
+
+    // Successful login — clear any accumulated failed-attempt state.
+    if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null },
+      });
+    }
 
     const tokens = await issueTokens(user.id, user.role, { deviceType, deviceToken });
     return {
