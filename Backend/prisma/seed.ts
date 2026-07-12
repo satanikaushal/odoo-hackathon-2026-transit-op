@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 
 const SEED_USERS = [
@@ -8,20 +9,35 @@ const SEED_USERS = [
   { name: "Financial Analyst", email: "financial.analyst@transitops.dev", role: "FINANCIAL_ANALYST" as const },
 ];
 
-const SEED_PASSWORD = "Password123!";
+function generatePassword(): string {
+  return randomBytes(12).toString("base64url");
+}
 
 async function main() {
-  const passwordHash = await Bun.password.hash(SEED_PASSWORD);
+  const credentials: { email: string; password: string }[] = [];
 
   for (const user of SEED_USERS) {
-    await prisma.user.upsert({
-      where: { email: user.email },
-      update: {},
-      create: { ...user, passwordHash },
-    });
+    const existing = await prisma.user.findUnique({ where: { email: user.email } });
+    if (existing) {
+      console.log(`- ${user.email} already exists, leaving password untouched`);
+      continue;
+    }
+
+    const password = generatePassword();
+    const passwordHash = await Bun.password.hash(password);
+    await prisma.user.create({ data: { ...user, passwordHash } });
+    credentials.push({ email: user.email, password });
   }
 
-  console.log(`Seeded ${SEED_USERS.length} users. Password for all: ${SEED_PASSWORD}`);
+  if (credentials.length === 0) {
+    console.log("No new users created.");
+    return;
+  }
+
+  console.log("\nSeeded users — save these now, passwords are never stored or shown again:\n");
+  for (const { email, password } of credentials) {
+    console.log(`  ${email}\t${password}`);
+  }
 }
 
 main()

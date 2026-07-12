@@ -12,7 +12,6 @@ export const env = {
   isProduction: NODE_ENV === "production",
   DATABASE_URL: required("DATABASE_URL"),
   JWT_ACCESS_SECRET: required("JWT_ACCESS_SECRET"),
-  JWT_REFRESH_SECRET: required("JWT_REFRESH_SECRET"),
   JWT_ACCESS_TTL: process.env.JWT_ACCESS_TTL ?? "15m",
   JWT_REFRESH_TTL_DAYS: Number(process.env.JWT_REFRESH_TTL_DAYS ?? 7),
 };

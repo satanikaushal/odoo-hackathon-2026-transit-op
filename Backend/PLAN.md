@@ -175,14 +175,14 @@ Implement as a single `requireRole(...roles)` Express middleware (`src/middlewar
 6. `prisma/seed.ts`: one user per role (`ADMIN`, `FLEET_MANAGER`, `DRIVER`, `SAFETY_OFFICER`, `FINANCIAL_ANALYST`), password `Password123!` via `Bun.password.hash`. Run with `bun run db:seed`.
 7. `package.json` scripts: `db:push`, `db:generate`, `db:seed`, `db:studio`. See `README.md` for the day-to-day DB commands.
 
-### Phase 1 — Auth & RBAC
-1. `src/schemas/auth.schema.ts` — login body.
-2. `src/services/auth.service.ts` — verify password (`Bun.password.verify`), issue access+refresh JWTs, store refresh token hash in `RefreshToken`.
-3. `src/controllers/auth.controller.ts` + `src/routes/auth.routes.ts` — login, refresh, logout, me.
-4. `src/middleware/authenticate.ts` — verifies bearer token, attaches `req.user`.
-5. `src/middleware/authorize.ts` — `requireRole(...roles)`.
-6. Wire `authenticate` globally in `app.ts` (except `/auth/login`, `/health`).
-7. `src/controllers/user.controller.ts` — admin user management (create/list/change role).
+### Phase 1 — Auth & RBAC ✅ mostly done (login/refresh/logout/me + middleware)
+1. ✅ `src/schemas/auth.schema.ts` — login body (`loginSchema`) and refresh/logout body (`refreshSchema`).
+2. ✅ `src/services/auth.service.ts` — verifies password (`Bun.password.verify`), issues access JWT (`src/lib/jwt.ts`, 15m default) + opaque refresh token (`src/lib/refreshToken.ts`, sha256-hashed before storing in `RefreshToken`). Refresh **rotates**: each use revokes the old token row and issues a new pair; reuse of a spent/revoked/expired token is rejected.
+3. ✅ `src/controllers/auth.controller.ts` + `src/routes/auth.routes.ts` — `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me`.
+4. ✅ `src/middleware/authenticate.ts` — verifies the bearer access token, attaches `req.user = { sub, role }`.
+5. ✅ `src/middleware/authorize.ts` — `authorize(...roles: Role[])`, checks `req.user.role`.
+6. Not wired globally in `app.ts` yet — only `/auth/me` uses `authenticate` so far, since it's the only protected route so far. Once Phase 2+ resource routers exist, mount them after `authenticate` at the `/api` level (or apply `authenticate`/`authorize` per-router) rather than exempting individual auth routes from a blanket global middleware.
+7. Still pending: `src/controllers/user.controller.ts` for admin user management (create/list/change role) — deferred, `prisma/seed.ts` covers initial users for now (one per role, random password printed once at seed time via `Bun.password.hash`, never stored in plaintext or committed).
 
 ### Phase 2 — Vehicle Registry
 1. `src/schemas/vehicle.schema.ts` (create/update/query-filter schemas).

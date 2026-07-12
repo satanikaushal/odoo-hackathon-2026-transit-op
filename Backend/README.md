@@ -24,7 +24,7 @@ Then apply migrations and seed some users:
 
 ```bash
 bun run db:migrate   # applies prisma/migrations, prompts for a name if the schema changed
-bun run db:seed      # creates one user per role, password: Password123!
+bun run db:seed      # creates one user per role, each with a random password printed once to the console
 ```
 
 ### Changing the schema
@@ -48,5 +48,11 @@ bun run db:studio    # browse the DB in Prisma Studio
 bun run dev     # hot reload
 bun run start   # no hot reload
 ```
+
+## Docs
+
+- [`docs/api.md`](docs/api.md) — every endpoint: method, path, request body, response shape.
+- [`docs/auth.md`](docs/auth.md) — how auth actually works (tokens, rotation, RBAC).
+- [`PLAN.md`](PLAN.md) — full backend build plan and roadmap.
 
 This project was created using `bun init` in bun v1.3.14. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
