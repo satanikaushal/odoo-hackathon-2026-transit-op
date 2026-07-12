@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/application/auth_session_provider.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
+import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 import 'app_routes.dart';
 import 'role_access.dart';
@@ -70,7 +71,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: AppRoutes.dashboard,
             pageBuilder: (context, state) => _noTransitionPage(
               state,
-              const PlaceholderScreen(title: 'Dashboard'),
+              const DashboardScreen(),
             ),
           ),
           GoRoute(
