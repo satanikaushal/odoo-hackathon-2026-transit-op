@@ -166,12 +166,14 @@ Implement as a single `requireRole(...roles)` Express middleware (`src/middlewar
 
 ## 7. Step-by-step build order
 
-### Phase 0 — Foundations
-1. Add Prisma: `bun add -d prisma`, `bun add @prisma/client`; `bunx prisma init`.
-2. Write `prisma/schema.prisma` per §3, run `bunx prisma migrate dev --name init`.
-3. `src/lib/prisma.ts` — singleton `PrismaClient` (avoid multiple instances under `--hot`).
-4. Extend `src/config/env.ts` with `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, token TTLs.
-5. Seed script (`prisma/seed.ts`): one `ADMIN` user + one of each role, so the team can log in immediately.
+### Phase 0 — Foundations ✅ done
+1. Added Prisma 7 (`prisma`, `@prisma/client`) plus the Postgres driver adapter it now requires (`@prisma/adapter-pg`, `pg`) — Prisma 7's generated client has no built-in engine binary, `PrismaClient` must be constructed with an `adapter`.
+2. `prisma/schema.prisma` written per §3 (see file — all 8 entities + enums).
+3. DB: no Docker/Postgres install available in this environment, so used `bunx prisma dev --detach` (Prisma's embedded local Postgres, no Docker needed). Its default `prisma+postgres://` proxy URL didn't reliably support `migrate dev` here, so `DATABASE_URL`/`SHADOW_DATABASE_URL` in `.env` point at the **raw TCP** URLs it prints instead. Real migrations are set up: `prisma/migrations/20260712051431_init` is the baseline (generated via `prisma migrate diff` + `prisma migrate resolve --applied`, since the schema had already been pushed once with `db push` while diagnosing the proxy issue), and `bun run db:migrate` (`prisma migrate dev`) works normally for schema changes from here on — verified with a real follow-up migration. `db:push` stays available as a fallback if the shadow DB flakes again.
+4. `src/lib/prisma.ts` — singleton `PrismaClient` wired with `PrismaPg` adapter (avoids multiple instances under `--hot`).
+5. `src/config/env.ts` extended with `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, token TTLs (fails fast if missing).
+6. `prisma/seed.ts`: one user per role (`ADMIN`, `FLEET_MANAGER`, `DRIVER`, `SAFETY_OFFICER`, `FINANCIAL_ANALYST`), password `Password123!` via `Bun.password.hash`. Run with `bun run db:seed`.
+7. `package.json` scripts: `db:push`, `db:generate`, `db:seed`, `db:studio`. See `README.md` for the day-to-day DB commands.
 
 ### Phase 1 — Auth & RBAC
 1. `src/schemas/auth.schema.ts` — login body.
