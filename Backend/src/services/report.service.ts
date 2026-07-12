@@ -139,12 +139,15 @@ export const reportService = {
       costService.operationalCostByVehicle(),
     ]);
 
+    // `_sum.revenue` is a Prisma Decimal — coerce to Number before arithmetic
+    // (`Decimal + Decimal` silently string-concatenates via valueOf()).
     const revenueByVehicle = new Map<string, number>();
-    for (const row of revenue) revenueByVehicle.set(row.vehicleId, row._sum.revenue ?? 0);
+    for (const row of revenue) revenueByVehicle.set(row.vehicleId, Number(row._sum.revenue ?? 0));
 
     return vehicles.map((vehicle) => {
       const totalRevenue = revenueByVehicle.get(vehicle.id) ?? 0;
       const operationalCost = costByVehicle.get(vehicle.id)?.operationalCost ?? 0;
+      const acquisitionCost = Number(vehicle.acquisitionCost);
       const netProfit = totalRevenue - operationalCost;
       return {
         vehicleId: vehicle.id,
@@ -152,10 +155,10 @@ export const reportService = {
         name: vehicle.name,
         totalRevenue: round(totalRevenue),
         operationalCost: round(operationalCost),
-        acquisitionCost: round(vehicle.acquisitionCost),
+        acquisitionCost: round(acquisitionCost),
         netProfit: round(netProfit),
         // ROI is a small ratio, so keep more precision than the money fields.
-        roi: vehicle.acquisitionCost > 0 ? round(netProfit / vehicle.acquisitionCost, 4) : null,
+        roi: acquisitionCost > 0 ? round(netProfit / acquisitionCost, 4) : null,
       };
     });
   },

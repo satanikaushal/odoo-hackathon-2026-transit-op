@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { created, ok } from "../lib/response";
 import { reqLogger } from "../lib/logger";
 import { vehicleService } from "../services/vehicle.service";
+import { costService } from "../services/cost.service";
 import type {
   CreateVehicleInput,
   ListVehiclesQuery,
@@ -34,6 +35,16 @@ export async function getVehicle(req: Request, res: Response) {
   const vehicle = await vehicleService.getById(id);
   reqLogger(req).debug({ vehicleId: id }, "fetched vehicle");
   ok(res, vehicle);
+}
+
+// Total operational cost (fuel + maintenance) for a single vehicle, per §3.7.
+export async function getVehicleCosts(req: Request, res: Response) {
+  const { id } = req.validated.params as { id: string };
+  // 404 cleanly if the vehicle doesn't exist rather than returning zero costs.
+  await vehicleService.getById(id);
+  const costs = await costService.totalOperationalCost(id);
+  reqLogger(req).debug({ vehicleId: id, ...costs }, "computed vehicle operational cost");
+  ok(res, { vehicleId: id, ...costs });
 }
 
 export async function updateVehicle(req: Request, res: Response) {

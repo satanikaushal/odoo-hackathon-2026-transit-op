@@ -20,8 +20,11 @@ export const costService = {
       prisma.fuelLog.aggregate({ where: { vehicleId }, _sum: { cost: true } }),
       prisma.maintenanceLog.aggregate({ where: { vehicleId }, _sum: { cost: true } }),
     ]);
-    const fuelCost = fuel._sum.cost ?? 0;
-    const maintenanceCost = maintenance._sum.cost ?? 0;
+    // `_sum.cost` is a Prisma Decimal (or null). Coerce to Number *before*
+    // arithmetic — `Decimal + Decimal` uses valueOf() and silently string-
+    // concatenates ("100.5" + "50.25" -> "100.550.25").
+    const fuelCost = Number(fuel._sum.cost ?? 0);
+    const maintenanceCost = Number(maintenance._sum.cost ?? 0);
     return { fuelCost, maintenanceCost, operationalCost: fuelCost + maintenanceCost };
   },
 
@@ -37,12 +40,12 @@ export const costService = {
     const byVehicle = new Map<string, VehicleCost>();
     for (const row of fuel) {
       const cost = byVehicle.get(row.vehicleId) ?? blankCost();
-      cost.fuelCost = row._sum.cost ?? 0;
+      cost.fuelCost = Number(row._sum.cost ?? 0);
       byVehicle.set(row.vehicleId, cost);
     }
     for (const row of maintenance) {
       const cost = byVehicle.get(row.vehicleId) ?? blankCost();
-      cost.maintenanceCost = row._sum.cost ?? 0;
+      cost.maintenanceCost = Number(row._sum.cost ?? 0);
       byVehicle.set(row.vehicleId, cost);
     }
     for (const cost of byVehicle.values()) {

@@ -3,6 +3,7 @@ import {
   createVehicle,
   deleteVehicle,
   getVehicle,
+  getVehicleCosts,
   listVehicles,
   updateVehicle,
   updateVehicleStatus,
@@ -29,6 +30,7 @@ vehicleRouter.use(authenticate);
 
 vehicleRouter.get("/", validateQuery(listVehiclesQuerySchema), listVehicles);
 vehicleRouter.get("/:id", validateParams(vehicleIdParamsSchema), getVehicle);
+vehicleRouter.get("/:id/costs", validateParams(vehicleIdParamsSchema), getVehicleCosts);
 
 vehicleRouter.post("/", canManage, validateBody(createVehicleSchema), createVehicle);
 
