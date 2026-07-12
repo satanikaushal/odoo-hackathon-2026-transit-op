@@ -17,9 +17,6 @@ abstract final class ApiLogger {
     }
 
     _logHeader('[API] → ${options.method} ${options.uri}');
-    if (options.data != null) {
-      _logJson('body', options.data);
-    }
   }
 
   static void logResponse(Response<dynamic> response) {

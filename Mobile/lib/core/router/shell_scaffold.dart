@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/application/auth_session_provider.dart';
 import '../../shared/models/user_role.dart';
 import '../../shared/utils/responsive.dart';
 import '../../shared/widgets/app_text.dart';
 import '../config/app_environment.dart';
+import 'app_routes.dart';
 import 'role_access.dart';
 
 /// Breakpoint above which the web-style sidebar stays pinned open.
@@ -175,17 +178,20 @@ class ShellScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
+    final sectionRoute = AppRoutes.shellSectionRoute(location) ?? location;
     final navItems = RoleAccess.sidebarNavItems(role);
     final currentItem = navItems.firstWhere(
-      (item) => item.route == location,
+      (item) => item.route == sectionRoute,
       orElse: () => navItems.first,
     );
+    final pageTitle = AppRoutes.pageTitle(location) ?? currentItem.label;
+    final showBack = AppRoutes.isNestedShellRoute(location);
     final usePersistentSidebar =
         MediaQuery.sizeOf(context).width >= kPersistentSidebarBreakpoint;
 
     final sidebar = AppSidebar(
       role: role,
-      selectedRoute: location,
+      selectedRoute: sectionRoute,
       closeOnSelect: !usePersistentSidebar,
       onDestinationSelected: context.go,
     );
@@ -206,7 +212,13 @@ class ShellScaffold extends StatelessWidget {
                 child: sidebar,
               ),
             ),
-            Expanded(child: _ShellMainContent(title: currentItem.label, child: child)),
+            Expanded(
+              child: _ShellMainContent(
+                title: pageTitle,
+                showBack: showBack,
+                child: child,
+              ),
+            ),
           ],
         ),
       );
@@ -214,16 +226,17 @@ class ShellScaffold extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: !showBack,
+        leading: showBack
+            ? BackButton(onPressed: () => context.pop())
+            : null,
         title: AppText(
-          currentItem.label,
+          pageTitle,
           size: 18,
           fontWeight: FontWeight.w600,
         ),
       ),
-      drawer: Drawer(
-        width: 280,
-        child: sidebar,
-      ),
+      drawer: showBack ? null : Drawer(width: 280, child: sidebar),
       body: child,
     );
   }
@@ -233,10 +246,12 @@ class _ShellMainContent extends StatelessWidget {
   const _ShellMainContent({
     required this.title,
     required this.child,
+    this.showBack = false,
   });
 
   final String title;
   final Widget child;
+  final bool showBack;
 
   @override
   Widget build(BuildContext context) {
@@ -252,10 +267,20 @@ class _ShellMainContent extends StatelessWidget {
                 horizontal: 24,
                 vertical: 20,
               ),
-              child: AppText(
-                title,
-                size: 24,
-                fontWeight: FontWeight.w700,
+              child: Row(
+                children: [
+                  if (showBack) ...[
+                    BackButton(onPressed: () => context.pop()),
+                    Responsive.horizontalGap(8),
+                  ],
+                  Expanded(
+                    child: AppText(
+                      title,
+                      size: 24,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -267,11 +292,13 @@ class _ShellMainContent extends StatelessWidget {
   }
 }
 
-class UnauthorizedScreen extends StatelessWidget {
+class UnauthorizedScreen extends ConsumerWidget {
   const UnauthorizedScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final role = ref.watch(authSessionProvider).role;
+
     return Padding(
       padding: Responsive.getPadding(24),
       child: Center(
@@ -284,6 +311,13 @@ class UnauthorizedScreen extends StatelessWidget {
               'You do not have access to this module.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: Responsive.getF(16)),
+            ),
+            Responsive.verticalGap(24),
+            FilledButton(
+              onPressed: role == null
+                  ? null
+                  : () => context.go(RoleAccess.defaultRoute(role)),
+              child: const Text('Go to Home'),
             ),
           ],
         ),

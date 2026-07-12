@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../shared/models/user_role.dart';
+import '../../features/expenses/domain/expenses_permissions.dart';
 import 'app_routes.dart';
 
 class ShellNavItem {
@@ -46,6 +47,11 @@ abstract final class RoleAccess {
             icon: Icons.build_outlined,
             route: AppRoutes.maintenance,
           ),
+          ShellNavItem(
+            label: 'Fuel & Expenses',
+            icon: Icons.payments_outlined,
+            route: AppRoutes.expenses,
+          ),
           _settingsNavItem,
         ],
       UserRole.DRIVER => const [
@@ -58,6 +64,11 @@ abstract final class RoleAccess {
             label: 'Trips',
             icon: Icons.route_outlined,
             route: AppRoutes.trips,
+          ),
+          ShellNavItem(
+            label: 'Fuel Logs',
+            icon: Icons.local_gas_station_outlined,
+            route: AppRoutes.expenses,
           ),
           _settingsNavItem,
         ],
@@ -94,18 +105,43 @@ abstract final class RoleAccess {
       return true;
     }
 
+    if (!_canAccessExpensesSubRoute(role, location)) {
+      return false;
+    }
+
+    final sectionRoute = AppRoutes.shellSectionRoute(location) ?? location;
+
     final allowedRoutes =
         sidebarNavItems(role).map((item) => item.route).toSet();
     if (role == UserRole.ADMIN) {
-      return AppRoutes.shellRoutes.contains(location);
+      return AppRoutes.isShellRoute(location);
     }
-    return allowedRoutes.contains(location);
+    return allowedRoutes.contains(sectionRoute);
   }
 
   static bool _isPublicRoute(String location) {
     return location == AppRoutes.splash ||
         location == AppRoutes.login ||
         location.startsWith(AppRoutes.unauthorized);
+  }
+
+  static bool _canAccessExpensesSubRoute(UserRole role, String location) {
+    if (location == AppRoutes.fuelLogAdd) {
+      return role.canCreateFuelLogs;
+    }
+    if (location == AppRoutes.expenseRecordAdd) {
+      return role.canCreateExpenses;
+    }
+    if (location.startsWith('${AppRoutes.expenses}/fuel/')) {
+      return role.canReadFuelLogs;
+    }
+    if (location.startsWith('${AppRoutes.expenses}/record/')) {
+      return role.canReadExpenses;
+    }
+    if (location == AppRoutes.expenses) {
+      return role.canReadFuelLogs || role.canReadExpenses;
+    }
+    return true;
   }
 
   static const List<ShellNavItem> _adminNavItems = [
