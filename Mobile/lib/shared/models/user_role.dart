@@ -1,20 +1,31 @@
+// ignore_for_file: constant_identifier_names
+
 enum UserRole {
-  fleetManager('fleet_manager', 'Fleet Manager'),
-  dispatcher('dispatcher', 'Dispatcher'),
-  safetyOfficer('safety_officer', 'Safety Officer'),
-  financialAnalyst('financial_analyst', 'Financial Analyst');
+  ADMIN,
+  FLEET_MANAGER,
+  DRIVER,
+  SAFETY_OFFICER,
+  FINANCIAL_ANALYST;
 
-  const UserRole(this.value, this.label);
+  String get value => name;
 
-  final String value;
-  final String label;
+  String get label {
+    return switch (this) {
+      UserRole.ADMIN => 'Admin',
+      UserRole.FLEET_MANAGER => 'Fleet Manager',
+      UserRole.DRIVER => 'Dispatcher',
+      UserRole.SAFETY_OFFICER => 'Safety Officer',
+      UserRole.FINANCIAL_ANALYST => 'Financial Analyst',
+    };
+  }
 
   static UserRole? fromString(String? value) {
     if (value == null) {
       return null;
     }
+
     for (final role in UserRole.values) {
-      if (role.value == value) {
+      if (role.name == value) {
         return role;
       }
     }

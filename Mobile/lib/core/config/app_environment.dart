@@ -12,19 +12,19 @@ class AppEnvironment {
       Env.DEV => const AppConfig(
           env: Env.DEV,
           appName: 'TransitOps Dev',
-          baseUrl: 'https://dev-api.transitops.in/v1',
+          baseUrl: 'https://phn4x8b8-3000.inc1.devtunnels.ms/api',
           enableLogging: true,
         ),
       Env.STAGING => const AppConfig(
           env: Env.STAGING,
           appName: 'TransitOps Staging',
-          baseUrl: 'https://staging-api.transitops.in/v1',
+          baseUrl: 'https://staging-api.transitops.in/api',
           enableLogging: true,
         ),
       Env.PRODUCTION => const AppConfig(
           env: Env.PRODUCTION,
           appName: 'TransitOps',
-          baseUrl: 'https://api.transitops.in/v1',
+          baseUrl: 'https://api.transitops.in/api',
           enableLogging: false,
         ),
     };

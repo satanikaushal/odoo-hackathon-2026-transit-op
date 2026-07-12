@@ -54,10 +54,37 @@ class ApiErrorHandler {
     if (data is Map<String, dynamic>) {
       final message = data['message'] ?? data['error'] ?? data['detail'];
       if (message is String && message.isNotEmpty) {
-        return message;
+        return _formatValidationMessage(data, message);
       }
     }
     return null;
+  }
+
+  static String _formatValidationMessage(
+    Map<String, dynamic> raw,
+    String message,
+  ) {
+    final details = raw['details'];
+    if (details is! Map<String, dynamic>) {
+      return message;
+    }
+
+    final fieldErrors = details['fieldErrors'];
+    if (fieldErrors is! Map) {
+      return message;
+    }
+
+    for (final entry in fieldErrors.entries) {
+      final errors = entry.value;
+      if (errors is List && errors.isNotEmpty) {
+        final firstError = errors.first;
+        if (firstError is String && firstError.isNotEmpty) {
+          return firstError;
+        }
+      }
+    }
+
+    return message;
   }
 
   static String _defaultMessage(int? statusCode) {
@@ -77,6 +104,7 @@ class ApiErrorHandler {
   static FailureType _mapStatusCode(int? statusCode) {
     final code = statusCode ?? 0;
     return switch (code) {
+      400 => FailureType.validation,
       401 => FailureType.unauthorized,
       403 => FailureType.forbidden,
       404 => FailureType.notFound,

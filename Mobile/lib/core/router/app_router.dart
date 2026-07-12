@@ -58,57 +58,85 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const UnauthorizedScreen(),
       ),
       ShellRoute(
-        builder: (context, state, child) {
+        pageBuilder: (context, state, child) {
           final role = listenable.authState.role;
-          if (role == null) {
-            return child;
-          }
-          return ShellScaffold(role: role, child: child);
+          final shell = role == null
+              ? child
+              : ShellScaffold(role: role, child: child);
+          return _noTransitionPage(state, shell);
         },
         routes: [
           GoRoute(
             path: AppRoutes.dashboard,
-            builder: (context, state) =>
-                const PlaceholderScreen(title: 'Dashboard'),
+            pageBuilder: (context, state) => _noTransitionPage(
+              state,
+              const PlaceholderScreen(title: 'Dashboard'),
+            ),
           ),
           GoRoute(
             path: AppRoutes.fleet,
-            builder: (context, state) => const PlaceholderScreen(title: 'Fleet'),
+            pageBuilder: (context, state) => _noTransitionPage(
+              state,
+              const PlaceholderScreen(title: 'Fleet'),
+            ),
           ),
           GoRoute(
             path: AppRoutes.drivers,
-            builder: (context, state) =>
-                const PlaceholderScreen(title: 'Drivers'),
+            pageBuilder: (context, state) => _noTransitionPage(
+              state,
+              const PlaceholderScreen(title: 'Drivers'),
+            ),
           ),
           GoRoute(
             path: AppRoutes.trips,
-            builder: (context, state) => const PlaceholderScreen(title: 'Trips'),
+            pageBuilder: (context, state) => _noTransitionPage(
+              state,
+              const PlaceholderScreen(title: 'Trips'),
+            ),
           ),
           GoRoute(
             path: AppRoutes.maintenance,
-            builder: (context, state) =>
-                const PlaceholderScreen(title: 'Maintenance'),
+            pageBuilder: (context, state) => _noTransitionPage(
+              state,
+              const PlaceholderScreen(title: 'Maintenance'),
+            ),
           ),
           GoRoute(
             path: AppRoutes.expenses,
-            builder: (context, state) =>
-                const PlaceholderScreen(title: 'Fuel & Expenses'),
+            pageBuilder: (context, state) => _noTransitionPage(
+              state,
+              const PlaceholderScreen(title: 'Fuel & Expenses'),
+            ),
           ),
           GoRoute(
             path: AppRoutes.analytics,
-            builder: (context, state) =>
-                const PlaceholderScreen(title: 'Analytics'),
+            pageBuilder: (context, state) => _noTransitionPage(
+              state,
+              const PlaceholderScreen(title: 'Analytics'),
+            ),
           ),
           GoRoute(
             path: AppRoutes.settings,
-            builder: (context, state) =>
-                const PlaceholderScreen(title: 'Settings'),
+            pageBuilder: (context, state) => _noTransitionPage(
+              state,
+              const PlaceholderScreen(title: 'Settings'),
+            ),
           ),
         ],
       ),
     ],
   );
 });
+
+NoTransitionPage<void> _noTransitionPage(
+  GoRouterState state,
+  Widget child,
+) {
+  return NoTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+  );
+}
 
 String? _redirect(AuthSessionState authState, String location) {
   final isSplash = location == AppRoutes.splash;

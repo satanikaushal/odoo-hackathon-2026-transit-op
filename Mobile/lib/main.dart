@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,11 +11,16 @@ import 'core/firebase/analytics_service.dart';
 import 'core/firebase/crash_reporter.dart';
 import 'core/firebase/fcm_service.dart';
 import 'core/firebase/firebase_initializer.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   AppEnvironment.setUp(Env.DEV);
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   final sharedPreferences = await SharedPreferences.getInstance();
   await configureDependencies(sharedPreferences);
