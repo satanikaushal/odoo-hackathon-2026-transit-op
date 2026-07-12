@@ -278,6 +278,12 @@ List with optional filters + pagination. All query params optional.
 }
 ```
 
+### `GET /api/vehicles/available-for-dispatch` 🔒
+
+The dispatch selection pool: `data` is an array of every `AVAILABLE` vehicle
+(ordered by registration number), unpaginated since it backs a picker.
+`IN_SHOP` / `ON_TRIP` / `RETIRED` vehicles are excluded.
+
 ### `GET /api/vehicles/:id` 🔒
 
 `data` is the Vehicle object. **404** `"Vehicle not found"` if unknown.
@@ -361,7 +367,9 @@ referenced by trips or logs — retire it (`status: "RETIRED"`) instead. See
 Fuel purchases and non-fuel operational expenses (tolls / misc) are recorded
 per vehicle, optionally attributed to a trip. Maintenance is **not** an expense
 category here — its costs live on the maintenance log so the operational-cost
-formula (fuel + maintenance) never double-counts.
+formula (fuel + maintenance) never double-counts. Full behavioral detail —
+the trip-must-match-vehicle rule, the `vehicle` summary on reads, why these
+are append-only — is in [`fuel-expenses.md`](./fuel-expenses.md).
 
 Money fields accept a number or numeric string and are stored with 2-decimal
 precision. A trip-attributed log must reference a trip that belongs to the same

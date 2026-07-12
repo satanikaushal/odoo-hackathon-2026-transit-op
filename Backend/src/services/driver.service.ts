@@ -11,19 +11,47 @@ function isUniqueViolation(err: unknown): boolean {
 }
 
 export const driverService = {
-  async list({ status, q, sortBy, sortDir }: ListDriversQuery) {
+  async list({ status, q, sortBy, sortDir, page, limit }: ListDriversQuery) {
+    const where: Prisma.DriverWhereInput = {
+      ...(status && { status }),
+      ...(q && {
+        OR: [
+          { name: { contains: q, mode: "insensitive" } },
+          { licenseNumber: { contains: q, mode: "insensitive" } },
+          { contactNumber: { contains: q } },
+        ],
+      }),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.driver.findMany({
+        where,
+        orderBy: { [sortBy]: sortDir } as Prisma.DriverOrderByWithRelationInput,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.driver.count({ where }),
+    ]);
+
+    return {
+      items,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  },
+
+  // Drivers whose license expires within `withinDays` from now, excluding
+  // SUSPENDED drivers (they're not on active duty). Used by the daily
+  // license-expiry reminder job. Soonest-to-expire first.
+  async findExpiringLicenses(withinDays: number) {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + withinDays * 24 * 60 * 60 * 1000);
+
     return prisma.driver.findMany({
       where: {
-        ...(status && { status }),
-        ...(q && {
-          OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { licenseNumber: { contains: q, mode: "insensitive" } },
-            { contactNumber: { contains: q } },
-          ],
-        }),
+        status: { not: "SUSPENDED" },
+        licenseExpiryDate: { gte: now, lte: cutoff },
       },
-      orderBy: { [sortBy]: sortDir } as Prisma.DriverOrderByWithRelationInput,
+      orderBy: { licenseExpiryDate: "asc" },
     });
   },
 

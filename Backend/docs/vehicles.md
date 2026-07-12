@@ -119,6 +119,40 @@ pagination. All query params are optional.
 }
 ```
 
+### `GET /api/vehicles/available-for-dispatch`
+
+The dispatch selection pool — every vehicle currently `status = AVAILABLE`,
+ordered by `registrationNumber` ascending. `data` is a **plain array** of
+vehicle objects (not the `{ items, pagination }` envelope the list endpoint
+uses), since it backs a picker rather than a browsable table. `IN_SHOP`,
+`ON_TRIP`, and `RETIRED` vehicles are excluded.
+
+```json
+// GET /api/vehicles/available-for-dispatch
+{
+  "success": true,
+  "message": "OK",
+  "data": [
+    {
+      "id": "cmrh...",
+      "registrationNumber": "MH12AB1234",
+      "name": "Tata Ace",
+      "type": "Truck",
+      "maxLoadCapacity": 1000,
+      "odometer": 0,
+      "acquisitionCost": "550000.50",
+      "status": "AVAILABLE",
+      "region": "West",
+      "createdAt": "2026-07-12T05:24:43.814Z",
+      "updatedAt": "2026-07-12T05:24:43.814Z"
+    }
+  ]
+}
+```
+
+Note the route is registered **before** `/:id` in `vehicle.routes.ts`, so
+`available-for-dispatch` isn't mistaken for a vehicle id.
+
 ### `GET /api/vehicles/:id`
 
 Fetch one vehicle by `id`. **404** `"Vehicle not found"` if it doesn't exist.

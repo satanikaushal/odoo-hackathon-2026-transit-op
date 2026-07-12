@@ -5,6 +5,7 @@ import {
   getVehicle,
   getVehicleCosts,
   listVehicles,
+  listVehiclesAvailableForDispatch,
   updateVehicle,
   updateVehicleStatus,
 } from "../controllers/vehicle.controller";
@@ -29,6 +30,8 @@ const canManage = authorize(Role.ADMIN, Role.FLEET_MANAGER);
 vehicleRouter.use(authenticate);
 
 vehicleRouter.get("/", validateQuery(listVehiclesQuerySchema), listVehicles);
+// Must precede "/:id" so it isn't captured as a vehicle id.
+vehicleRouter.get("/available-for-dispatch", listVehiclesAvailableForDispatch);
 vehicleRouter.get("/:id", validateParams(vehicleIdParamsSchema), getVehicle);
 vehicleRouter.get("/:id/costs", validateParams(vehicleIdParamsSchema), getVehicleCosts);
 

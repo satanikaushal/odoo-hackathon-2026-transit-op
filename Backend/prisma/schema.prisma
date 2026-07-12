@@ -58,16 +58,18 @@ enum DeviceType {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  name          String
-  email         String         @unique
-  passwordHash  String
-  role          Role
-  isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  refreshTokens RefreshToken[]
-  createdTrips  Trip[]         @relation("TripCreatedBy")
+  id                  String         @id @default(cuid())
+  name                String
+  email               String         @unique
+  passwordHash        String
+  role                Role
+  isActive            Boolean        @default(true)
+  failedLoginAttempts Int            @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  refreshTokens       RefreshToken[]
+  createdTrips        Trip[]         @relation("TripCreatedBy")
 }
 
 model RefreshToken {
@@ -79,6 +81,10 @@ model RefreshToken {
   revokedAt   DateTime?
   deviceType  DeviceType?
   deviceToken String?
+  // Where the session was created from. Used to detect logins from a new
+  // device (deviceToken / userAgent) or location (ipAddress) and notify the user.
+  ipAddress   String?
+  userAgent   String?
   createdAt   DateTime    @default(now())
 
   @@index([userId])

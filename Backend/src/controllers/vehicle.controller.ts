@@ -30,6 +30,13 @@ export async function listVehicles(req: Request, res: Response) {
   ok(res, result);
 }
 
+// The pool of AVAILABLE vehicles for the dispatch/trip-creation picker (§5).
+export async function listVehiclesAvailableForDispatch(req: Request, res: Response) {
+  const vehicles = await vehicleService.listAvailableForDispatch();
+  reqLogger(req).debug({ returned: vehicles.length }, "listed vehicles available for dispatch");
+  ok(res, vehicles);
+}
+
 export async function getVehicle(req: Request, res: Response) {
   const { id } = req.validated.params as { id: string };
   const vehicle = await vehicleService.getById(id);

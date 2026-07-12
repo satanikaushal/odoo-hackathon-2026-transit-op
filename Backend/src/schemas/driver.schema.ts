@@ -31,6 +31,8 @@ export type DriverIdParam = z.infer<typeof driverIdParamSchema>;
 export const listDriversQuerySchema = z.object({
   status: z.enum(DriverStatus).optional(),
   q: z.string().trim().min(1).optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max(100).optional().default(20),
   // Whitelisted sortable columns — never pass raw client input into orderBy.
   sortBy: z
     .enum(["createdAt", "name", "licenseExpiryDate", "safetyScore", "status"])

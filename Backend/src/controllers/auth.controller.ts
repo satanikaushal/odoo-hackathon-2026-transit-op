@@ -6,7 +6,10 @@ import type { LoginInput, RefreshInput } from "../schemas/auth.schema";
 
 export async function login(req: Request, res: Response) {
   const input = req.validated.body as LoginInput;
-  const result = await authService.login(input);
+  const result = await authService.login(input, {
+    ipAddress: req.ip ?? null,
+    userAgent: req.get("user-agent") ?? null,
+  });
   // Never log the password or the issued tokens — only who authenticated.
   reqLogger(req).info(
     { userId: result.user.id, role: result.user.role },

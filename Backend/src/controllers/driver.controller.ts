@@ -11,9 +11,12 @@ import type {
 
 export async function listDrivers(req: Request, res: Response) {
   const query = req.validated.query as ListDriversQuery;
-  const drivers = await driverService.list(query);
-  reqLogger(req).debug({ filters: query, returned: drivers.length }, "listed drivers");
-  ok(res, drivers);
+  const result = await driverService.list(query);
+  reqLogger(req).debug(
+    { filters: query, returned: result.items.length, total: result.pagination.total },
+    "listed drivers",
+  );
+  ok(res, result);
 }
 
 export async function getDriver(req: Request, res: Response) {
