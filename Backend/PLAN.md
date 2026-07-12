@@ -42,7 +42,9 @@ Enums:
 - `DriverStatus`: `AVAILABLE | ON_TRIP | OFF_DUTY | SUSPENDED`
 - `TripStatus`: `DRAFT | DISPATCHED | COMPLETED | CANCELLED`
 - `MaintenanceStatus`: `OPEN | CLOSED`
-- `ExpenseCategory`: `TOLL | MAINTENANCE | MISC` (fuel is its own table, not an expense row)
+- `ExpenseCategory`: `TOLL | MISC` (fuel is its own table, not an expense row; maintenance costs live on `MaintenanceLog` — a `MAINTENANCE` expense category would double-count in the brief's Fuel + Maintenance operational-cost formula)
+
+All money columns (`acquisitionCost`, `cost`, `amount`, `revenue`) are `Decimal(12,2)`, not `Float` — floats can't represent decimal currency exactly and the graded reports (ROI, operational cost) are financial math.
 
 Entities:
 
