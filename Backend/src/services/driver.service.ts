@@ -11,7 +11,7 @@ function isUniqueViolation(err: unknown): boolean {
 }
 
 export const driverService = {
-  async list({ status, q }: ListDriversQuery) {
+  async list({ status, q, sortBy, sortDir }: ListDriversQuery) {
     return prisma.driver.findMany({
       where: {
         ...(status && { status }),
@@ -23,7 +23,7 @@ export const driverService = {
           ],
         }),
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { [sortBy]: sortDir } as Prisma.DriverOrderByWithRelationInput,
     });
   },
 

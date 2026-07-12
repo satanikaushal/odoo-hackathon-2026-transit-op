@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Role } from "../generated/prisma/client";
 import {
   exportCsv,
+  exportPdf,
   getFleetUtilization,
   getFuelEfficiency,
   getOperationalCost,
@@ -24,3 +25,4 @@ reportRouter.get("/fleet-utilization", getFleetUtilization);
 reportRouter.get("/operational-cost", getOperationalCost);
 reportRouter.get("/vehicle-roi", getVehicleRoi);
 reportRouter.get("/export.csv", validateQuery(exportQuerySchema), exportCsv);
+reportRouter.get("/export.pdf", validateQuery(exportQuerySchema), exportPdf);

@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { ok } from "../lib/response";
 import { toCsv } from "../lib/csv";
+import { tablePdf } from "../lib/pdf";
 import { reportService } from "../services/report.service";
 import type { ExportQuery, ReportName } from "../schemas/report.schema";
 
@@ -20,11 +21,11 @@ export async function getVehicleRoi(_req: Request, res: Response) {
   ok(res, await reportService.vehicleRoi());
 }
 
-type Csv = { headers: string[]; rows: (string | number | null)[][] };
+type ReportTable = { headers: string[]; rows: (string | number | null)[][] };
 
-// Reuses the exact service functions the JSON endpoints call — the CSV path is
-// just a different serialization of the same data (PLAN.md §8.2).
-async function buildCsv(report: ReportName): Promise<Csv> {
+// Reuses the exact service functions the JSON endpoints call — the CSV and PDF
+// paths are just different serializations of the same data (PLAN.md §8.2).
+async function buildReportTable(report: ReportName): Promise<ReportTable> {
   switch (report) {
     case "fuel-efficiency": {
       const rows = await reportService.fuelEfficiency();
@@ -59,9 +60,27 @@ async function buildCsv(report: ReportName): Promise<Csv> {
 
 export async function exportCsv(req: Request, res: Response) {
   const { report } = req.validated.query as ExportQuery;
-  const { headers, rows } = await buildCsv(report);
+  const { headers, rows } = await buildReportTable(report);
 
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="${report}.csv"`);
   res.send(toCsv(headers, rows));
+}
+
+const REPORT_TITLES: Record<ReportName, string> = {
+  "fuel-efficiency": "Fuel Efficiency Report",
+  "fleet-utilization": "Fleet Utilization Report",
+  "operational-cost": "Operational Cost Report",
+  "vehicle-roi": "Vehicle ROI Report",
+};
+
+export async function exportPdf(req: Request, res: Response) {
+  const { report } = req.validated.query as ExportQuery;
+  const { headers, rows } = await buildReportTable(report);
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${report}.pdf"`);
+  const doc = tablePdf(REPORT_TITLES[report], headers, rows);
+  doc.pipe(res);
+  doc.end();
 }

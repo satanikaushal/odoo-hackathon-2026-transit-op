@@ -26,6 +26,9 @@ export type MaintenanceIdParam = z.infer<typeof maintenanceIdParamSchema>;
 export const listMaintenanceQuerySchema = z.object({
   vehicleId: z.string().min(1).optional(),
   status: z.enum(MaintenanceStatus).optional(),
+  // Whitelisted sortable columns — never pass raw client input into orderBy.
+  sortBy: z.enum(["openedAt", "closedAt", "cost", "status"]).optional().default("openedAt"),
+  sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(20),
 });

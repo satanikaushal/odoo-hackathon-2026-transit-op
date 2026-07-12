@@ -62,6 +62,12 @@ export const listVehiclesQuerySchema = z.object({
   region: z.string().trim().min(1).optional(),
   // Free-text match against registration number or name.
   search: z.string().trim().min(1).optional(),
+  // Whitelisted sortable columns — never pass raw client input into orderBy.
+  sortBy: z
+    .enum(["createdAt", "registrationNumber", "name", "type", "status", "odometer", "region"])
+    .optional()
+    .default("createdAt"),
+  sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(20),
 });
