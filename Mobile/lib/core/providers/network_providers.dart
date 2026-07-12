@@ -1,46 +1,52 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../di/di_callbacks.dart';
+import '../di/service_locator.dart';
 import '../network/api_client.dart';
 import '../network/api_error_notifier.dart';
 import '../network/dio_client.dart';
 import '../network/failure.dart';
 import '../network/unauthorized_handler.dart';
-import 'core_providers.dart';
 
 final apiErrorStateProvider =
     StateProvider<ApiErrorState?>((ref) => null);
 
 final sessionExpiredProvider = StateProvider<bool>((ref) => false);
 
-final apiErrorNotifierProvider = Provider<ApiErrorNotifier>((ref) {
-  return ApiErrorNotifier((error) {
+/// Wires GetIt callback holders to Riverpod UI state. Must be watched at app root.
+final diBridgeProvider = Provider<bool>((ref) {
+  getIt<ApiErrorCallbackHolder>().callback = (error) {
     ref.read(apiErrorStateProvider.notifier).state = error;
+  };
+
+  getIt<SessionExpiredBroadcaster>().onSessionExpired = () {
+    ref.read(sessionExpiredProvider.notifier).state = true;
+  };
+
+  ref.onDispose(() {
+    getIt<ApiErrorCallbackHolder>().callback = null;
+    getIt<SessionExpiredBroadcaster>().onSessionExpired = null;
   });
+
+  return true;
 });
 
-final unauthorizedHandlerProvider = Provider<UnauthorizedHandler>((ref) {
-  return UnauthorizedHandler(
-    secureStorage: ref.watch(secureStorageProvider),
-    preferences: ref.watch(preferencesServiceProvider),
-    apiErrorNotifier: ref.watch(apiErrorNotifierProvider),
-    onSessionExpired: () {
-      ref.read(sessionExpiredProvider.notifier).state = true;
-    },
-  );
-});
+final apiErrorNotifierProvider = Provider<ApiErrorNotifier>(
+  (ref) => getIt<ApiErrorNotifier>(),
+);
 
-final dioClientProvider = Provider<DioClient>((ref) {
-  return DioClient(
-    secureStorage: ref.watch(secureStorageProvider),
-    unauthorizedHandler: ref.watch(unauthorizedHandlerProvider),
-  );
-});
+final unauthorizedHandlerProvider = Provider<UnauthorizedHandler>(
+  (ref) => getIt<UnauthorizedHandler>(),
+);
 
-final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(ref.watch(dioClientProvider).dio);
-});
+final dioClientProvider = Provider<DioClient>(
+  (ref) => getIt<DioClient>(),
+);
 
-/// Shows a global API error once. Repositories can call this for fail-fast flows.
+final apiClientProvider = Provider<ApiClient>(
+  (ref) => getIt<ApiClient>(),
+);
+
 void showApiError(WidgetRef ref, Failure failure) {
   ref.read(apiErrorNotifierProvider).show(failure);
 }

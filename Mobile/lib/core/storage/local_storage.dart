@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -73,6 +74,29 @@ class PreferencesService {
 
   Future<bool> saveUserRole(String value) {
     return _prefs.setString(StorageKeys.userRole, value);
+  }
+
+  ThemeMode get themeMode {
+    return switch (_prefs.getString(StorageKeys.themeMode)) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+  }
+
+  Future<bool> saveThemeMode(ThemeMode mode) {
+    final value = switch (mode) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      ThemeMode.system => 'system',
+    };
+    return _prefs.setString(StorageKeys.themeMode, value);
+  }
+
+  String? get fcmToken => _prefs.getString(StorageKeys.fcmToken);
+
+  Future<bool> saveFcmToken(String token) {
+    return _prefs.setString(StorageKeys.fcmToken, token);
   }
 
   Future<void> clearSession() async {

@@ -4,7 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'core/config/app_environment.dart';
-import 'core/providers/core_providers.dart';
+import 'core/di/injection.dart';
+import 'core/di/service_locator.dart';
+import 'core/firebase/analytics_service.dart';
+import 'core/firebase/crash_reporter.dart';
+import 'core/firebase/fcm_service.dart';
+import 'core/firebase/firebase_initializer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,13 +17,17 @@ Future<void> main() async {
   AppEnvironment.setUp(Env.DEV);
 
   final sharedPreferences = await SharedPreferences.getInstance();
+  await configureDependencies(sharedPreferences);
+
+  await FirebaseInitializer.init(
+    crashReporter: getIt<CrashReporter>(),
+    analyticsService: getIt<AnalyticsService>(),
+    fcmService: getIt<FcmService>(),
+  );
 
   runApp(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-      ],
-      child: const App(),
+    const ProviderScope(
+      child: App(),
     ),
   );
 }

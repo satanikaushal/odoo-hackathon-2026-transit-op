@@ -8,4 +8,6 @@ abstract final class StorageKeys {
   static const userEmail = 'user_email';
   static const userName = 'user_name';
   static const userRole = 'user_role';
+  static const themeMode = 'theme_mode';
+  static const fcmToken = 'fcm_token';
 }
