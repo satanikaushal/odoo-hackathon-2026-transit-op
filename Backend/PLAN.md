@@ -166,21 +166,23 @@ Implement as a single `requireRole(...roles)` Express middleware (`src/middlewar
 
 ## 7. Step-by-step build order
 
-### Phase 0 — Foundations
-1. Add Prisma: `bun add -d prisma`, `bun add @prisma/client`; `bunx prisma init`.
-2. Write `prisma/schema.prisma` per §3, run `bunx prisma migrate dev --name init`.
-3. `src/lib/prisma.ts` — singleton `PrismaClient` (avoid multiple instances under `--hot`).
-4. Extend `src/config/env.ts` with `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, token TTLs.
-5. Seed script (`prisma/seed.ts`): one `ADMIN` user + one of each role, so the team can log in immediately.
+### Phase 0 — Foundations ✅ done
+1. Added Prisma 7 (`prisma`, `@prisma/client`) plus the Postgres driver adapter it now requires (`@prisma/adapter-pg`, `pg`) — Prisma 7's generated client has no built-in engine binary, `PrismaClient` must be constructed with an `adapter`.
+2. `prisma/schema.prisma` written per §3 (see file — all 8 entities + enums).
+3. DB: no Docker/Postgres install available in this environment, so used `bunx prisma dev --detach` (Prisma's embedded local Postgres, no Docker needed). Its default `prisma+postgres://` proxy URL didn't reliably support `migrate dev` here, so `DATABASE_URL`/`SHADOW_DATABASE_URL` in `.env` point at the **raw TCP** URLs it prints instead. Real migrations are set up: `prisma/migrations/20260712051431_init` is the baseline (generated via `prisma migrate diff` + `prisma migrate resolve --applied`, since the schema had already been pushed once with `db push` while diagnosing the proxy issue), and `bun run db:migrate` (`prisma migrate dev`) works normally for schema changes from here on — verified with a real follow-up migration. `db:push` stays available as a fallback if the shadow DB flakes again.
+4. `src/lib/prisma.ts` — singleton `PrismaClient` wired with `PrismaPg` adapter (avoids multiple instances under `--hot`).
+5. `src/config/env.ts` extended with `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, token TTLs (fails fast if missing).
+6. `prisma/seed.ts`: one user per role (`ADMIN`, `FLEET_MANAGER`, `DRIVER`, `SAFETY_OFFICER`, `FINANCIAL_ANALYST`), password `Password123!` via `Bun.password.hash`. Run with `bun run db:seed`.
+7. `package.json` scripts: `db:push`, `db:generate`, `db:seed`, `db:studio`. See `README.md` for the day-to-day DB commands.
 
-### Phase 1 — Auth & RBAC
-1. `src/schemas/auth.schema.ts` — login body.
-2. `src/services/auth.service.ts` — verify password (`Bun.password.verify`), issue access+refresh JWTs, store refresh token hash in `RefreshToken`.
-3. `src/controllers/auth.controller.ts` + `src/routes/auth.routes.ts` — login, refresh, logout, me.
-4. `src/middleware/authenticate.ts` — verifies bearer token, attaches `req.user`.
-5. `src/middleware/authorize.ts` — `requireRole(...roles)`.
-6. Wire `authenticate` globally in `app.ts` (except `/auth/login`, `/health`).
-7. `src/controllers/user.controller.ts` — admin user management (create/list/change role).
+### Phase 1 — Auth & RBAC ✅ mostly done (login/refresh/logout/me + middleware)
+1. ✅ `src/schemas/auth.schema.ts` — login body (`loginSchema`) and refresh/logout body (`refreshSchema`).
+2. ✅ `src/services/auth.service.ts` — verifies password (`Bun.password.verify`), issues access JWT (`src/lib/jwt.ts`, 15m default) + opaque refresh token (`src/lib/refreshToken.ts`, sha256-hashed before storing in `RefreshToken`). Refresh **rotates**: each use revokes the old token row and issues a new pair; reuse of a spent/revoked/expired token is rejected.
+3. ✅ `src/controllers/auth.controller.ts` + `src/routes/auth.routes.ts` — `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me`.
+4. ✅ `src/middleware/authenticate.ts` — verifies the bearer access token, attaches `req.user = { sub, role }`.
+5. ✅ `src/middleware/authorize.ts` — `authorize(...roles: Role[])`, checks `req.user.role`.
+6. Not wired globally in `app.ts` yet — only `/auth/me` uses `authenticate` so far, since it's the only protected route so far. Once Phase 2+ resource routers exist, mount them after `authenticate` at the `/api` level (or apply `authenticate`/`authorize` per-router) rather than exempting individual auth routes from a blanket global middleware.
+7. Still pending: `src/controllers/user.controller.ts` for admin user management (create/list/change role) — deferred, `prisma/seed.ts` covers initial users for now (one per role, random password printed once at seed time via `Bun.password.hash`, never stored in plaintext or committed).
 
 ### Phase 2 — Vehicle Registry
 1. `src/schemas/vehicle.schema.ts` (create/update/query-filter schemas).
