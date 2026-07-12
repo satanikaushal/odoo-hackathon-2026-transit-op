@@ -31,7 +31,7 @@ export const vehicleService = {
   },
 
   async list(query: ListVehiclesQuery) {
-    const { status, type, region, search, page, limit } = query;
+    const { status, type, region, search, sortBy, sortDir, page, limit } = query;
 
     const where: Prisma.VehicleWhereInput = {
       ...(status && { status }),
@@ -48,7 +48,7 @@ export const vehicleService = {
     const [items, total] = await Promise.all([
       prisma.vehicle.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: { [sortBy]: sortDir } as Prisma.VehicleOrderByWithRelationInput,
         skip: (page - 1) * limit,
         take: limit,
       }),

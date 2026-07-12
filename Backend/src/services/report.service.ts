@@ -142,13 +142,14 @@ export const reportService = {
     // `_sum.revenue` is a Prisma Decimal — coerce to Number before arithmetic
     // (`Decimal + Decimal` silently string-concatenates via valueOf()).
     const revenueByVehicle = new Map<string, number>();
+    // _sum on a Decimal column returns a Decimal object — convert at the boundary.
     for (const row of revenue) revenueByVehicle.set(row.vehicleId, Number(row._sum.revenue ?? 0));
 
     return vehicles.map((vehicle) => {
       const totalRevenue = revenueByVehicle.get(vehicle.id) ?? 0;
       const operationalCost = costByVehicle.get(vehicle.id)?.operationalCost ?? 0;
-      const acquisitionCost = Number(vehicle.acquisitionCost);
       const netProfit = totalRevenue - operationalCost;
+      const acquisitionCost = Number(vehicle.acquisitionCost);
       return {
         vehicleId: vehicle.id,
         registrationNumber: vehicle.registrationNumber,

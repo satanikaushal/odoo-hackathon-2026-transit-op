@@ -20,9 +20,7 @@ export const costService = {
       prisma.fuelLog.aggregate({ where: { vehicleId }, _sum: { cost: true } }),
       prisma.maintenanceLog.aggregate({ where: { vehicleId }, _sum: { cost: true } }),
     ]);
-    // `_sum.cost` is a Prisma Decimal (or null). Coerce to Number *before*
-    // arithmetic — `Decimal + Decimal` uses valueOf() and silently string-
-    // concatenates ("100.5" + "50.25" -> "100.550.25").
+    // _sum on a Decimal column returns a Decimal object — convert at the boundary.
     const fuelCost = Number(fuel._sum.cost ?? 0);
     const maintenanceCost = Number(maintenance._sum.cost ?? 0);
     return { fuelCost, maintenanceCost, operationalCost: fuelCost + maintenanceCost };
