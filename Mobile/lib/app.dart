@@ -7,6 +7,7 @@ import 'core/providers/network_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/router/app_routes.dart';
 import 'core/theme/app_theme.dart';
+import 'shared/widgets/app_dialogs.dart';
 import 'features/auth/application/auth_session_provider.dart';
 import 'shared/utils/responsive.dart';
 
@@ -24,10 +25,7 @@ class App extends ConsumerWidget {
         return;
       }
 
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      messenger?.showSnackBar(
-        SnackBar(content: Text(next.message)),
-      );
+      showSnackBarMessage(context, next.message);
       ref.read(apiErrorStateProvider.notifier).state = null;
     });
 

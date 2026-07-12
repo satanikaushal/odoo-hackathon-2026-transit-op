@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/config/app_environment.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../shared/utils/responsive.dart';
+import '../../../../shared/widgets/app_dialogs.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_gap.dart';
 import '../../../../shared/widgets/app_text.dart';
@@ -82,9 +83,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (failure != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(failure.message)),
-      );
+      showSnackBarMessage(context, failure.message);
     }
   }
 

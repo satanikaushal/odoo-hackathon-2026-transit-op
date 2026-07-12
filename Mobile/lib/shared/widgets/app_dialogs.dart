@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
-
 Future<bool?> showConflictDialog(
   BuildContext context, {
   required String message,
@@ -77,22 +75,7 @@ Future<bool> showConfirmDialog(
 }
 
 void showSnackBarMessage(BuildContext context, String message) {
-  final theme = Theme.of(context);
-  final isDark = theme.brightness == Brightness.dark;
-
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        message,
-        style: TextStyle(
-          color: isDark ? AppColors.darkTextPrimary : Colors.white,
-        ),
-      ),
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: isDark ? AppColors.darkSurfaceVariant : AppColors.lightTextPrimary,
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      elevation: 4,
-    ),
+    SnackBar(content: Text(message)),
   );
 }

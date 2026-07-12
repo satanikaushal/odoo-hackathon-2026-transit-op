@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -170,11 +171,13 @@ class SettingsScreen extends ConsumerWidget {
                 label: 'Version',
                 value: _appVersion,
               ),
-              const AppGap(8),
-              _InfoRow(
-                label: 'Environment',
-                value: AppEnvironment.current.env.name,
-              ),
+              if (!kReleaseMode) ...[
+                const AppGap(8),
+                _InfoRow(
+                  label: 'Environment',
+                  value: AppEnvironment.current.env.name,
+                ),
+              ],
             ],
           ),
         ),

@@ -10,7 +10,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  debugPrint('FCM background message: ${message.messageId}');
+  if (kDebugMode) {
+    debugPrint('FCM background message: ${message.messageId}');
+  }
 }
 
 class FcmService {
@@ -42,11 +44,15 @@ class FcmService {
 
     _messaging.onTokenRefresh.listen((token) async {
       await _preferences.saveFcmToken(token);
-      debugPrint('[FCM] token refreshed');
+      if (kDebugMode) {
+        debugPrint('[FCM] token refreshed');
+      }
     });
 
     FirebaseMessaging.onMessage.listen((message) {
-      debugPrint('[FCM] foreground message: ${message.messageId}');
+      if (kDebugMode) {
+        debugPrint('[FCM] foreground message: ${message.messageId}');
+      }
     });
 
     await _refreshAndSaveToken(logOnMiss: true);
@@ -91,10 +97,12 @@ class FcmService {
         if (!hasApnsToken) {
           if (logOnMiss && !_loggedApnsPending) {
             _loggedApnsPending = true;
-            debugPrint(
-              '[FCM] APNS token pending — FCM token will arrive via onTokenRefresh '
-              '(iPhone 17 / iOS 26 simulators may need iOS 26.1+ or a physical device).',
-            );
+            if (kDebugMode) {
+              debugPrint(
+                '[FCM] APNS token pending — FCM token will arrive via onTokenRefresh '
+                '(iPhone 17 / iOS 26 simulators may need iOS 26.1+ or a physical device).',
+              );
+            }
           }
           return cachedToken;
         }
@@ -106,12 +114,12 @@ class FcmService {
       }
       return token ?? cachedToken;
     } on FirebaseException catch (error) {
-      if (logOnMiss) {
+      if (logOnMiss && kDebugMode) {
         debugPrint('[FCM] ${error.code}: ${error.message}');
       }
       return cachedToken;
     } catch (error) {
-      if (logOnMiss) {
+      if (logOnMiss && kDebugMode) {
         debugPrint('[FCM] token unavailable: $error');
       }
       return cachedToken;

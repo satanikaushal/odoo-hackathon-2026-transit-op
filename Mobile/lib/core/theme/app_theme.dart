@@ -125,8 +125,17 @@ abstract final class AppTheme {
         dividerHeight: 0,
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: surfaceVariant,
-        contentTextStyle: TextStyle(color: textPrimary),
+        behavior: SnackBarBehavior.floating,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        backgroundColor:
+            isDark ? AppColors.darkSurfaceVariant : AppColors.lightTextPrimary,
+        contentTextStyle: TextStyle(
+          color: isDark ? AppColors.darkTextPrimary : Colors.white,
+        ),
+        insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: surface,
