@@ -1,1 +1,9 @@
-console.log("Hello via Bun!");
+import { env } from "./config/env";
+import { logger } from "./lib/logger";
+import { createApp } from "./app";
+
+const app = createApp();
+
+app.listen(env.PORT, () => {
+  logger.info(`Server running at http://localhost:${env.PORT}`);
+});
