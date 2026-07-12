@@ -20,6 +20,15 @@ export const env = {
   ENABLE_JOBS: (process.env.ENABLE_JOBS ?? "true") !== "false",
   REDIS_URL: process.env.REDIS_URL ?? "redis://localhost:6379",
 
+  // Rate limiting (Redis-backed). Set RATE_LIMIT_ENABLED=false to disable it
+  // globally (e.g. in tests). The global limiter guards every request; the auth
+  // limiter is a tighter cap on login/refresh to blunt credential brute-forcing.
+  RATE_LIMIT_ENABLED: (process.env.RATE_LIMIT_ENABLED ?? "true") !== "false",
+  RATE_LIMIT_WINDOW_MS: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000), // 1 minute
+  RATE_LIMIT_MAX: Number(process.env.RATE_LIMIT_MAX ?? 120), // per window, per IP
+  AUTH_RATE_LIMIT_WINDOW_MS: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS ?? 60_000),
+  AUTH_RATE_LIMIT_MAX: Number(process.env.AUTH_RATE_LIMIT_MAX ?? 10),
+
   // License-expiry reminders.
   LICENSE_REMINDER_DAYS: Number(process.env.LICENSE_REMINDER_DAYS ?? 30),
   // Cron expression for the daily scan. Default: 08:00 every day.

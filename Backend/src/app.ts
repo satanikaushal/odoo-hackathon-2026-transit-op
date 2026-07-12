@@ -1,15 +1,25 @@
 import { randomUUID } from "node:crypto";
 import express from "express";
+import helmet from "helmet";
 import pinoHttp from "pino-http";
 import { logger } from "./lib/logger";
 import { router } from "./routes";
 import { notFound } from "./middleware/notFound";
 import { errorHandler } from "./middleware/errorHandler";
+import { globalRateLimiter } from "./middleware/rateLimit";
 
 export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
+  // Secure HTTP response headers (HSTS, X-Content-Type-Options, X-Frame-Options,
+  // a baseline CSP, etc.). Runs first so every response is covered.
+  app.use(helmet());
+  // Trust the first proxy hop so req.ip reflects the real client (behind a
+  // load balancer / reverse proxy) rather than the proxy's address. This is
+  // what the rate limiter keys on. Only trust as many hops as you actually run
+  // in front of the app — over-trusting lets clients spoof X-Forwarded-For.
+  app.set("trust proxy", 1);
   app.use(
     pinoHttp({
       logger,
@@ -42,7 +52,12 @@ export function createApp() {
       customErrorMessage: (req, res, err) => `${req.method} ${req.url} ${res.statusCode} - ${err.message}`,
     }),
   );
-  app.use(express.json());
+  // Whole-API rate limit, before body parsing so flooded requests are cheap to
+  // reject. Runs after pino-http so 429s are still logged.
+  app.use(globalRateLimiter);
+  // Cap request body size to blunt large-payload DoS. All endpoints take small
+  // JSON bodies; 100kb is generous. Oversized bodies get a 413.
+  app.use(express.json({ limit: "100kb" }));
   app.use(router);
 
   app.use(notFound);
