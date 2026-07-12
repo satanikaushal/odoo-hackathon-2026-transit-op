@@ -5,10 +5,10 @@ requirement, request body, and response shape. For the auth *system* itself
 (tokens, rotation, RBAC internals) see [`auth.md`](./auth.md) — this doc is
 just "what do I send, what do I get back."
 
-This file only documents what's actually implemented. Vehicles, trips,
-maintenance, fuel/expenses, and the dashboard are planned but not built yet —
-see `../PLAN.md` for the full roadmap. Update this file as each phase lands;
-don't let it drift from the code.
+This file only documents what's actually implemented. Drivers, trips,
+maintenance, and the dashboard are built but not yet documented here; see
+`../PLAN.md` for the full roadmap. Update this file as each phase lands; don't
+let it drift from the code.
 
 ## Conventions
 
@@ -282,6 +282,23 @@ List with optional filters + pagination. All query params optional.
 
 `data` is the Vehicle object. **404** `"Vehicle not found"` if unknown.
 
+### `GET /api/vehicles/:id/costs` 🔒
+
+Total operational cost for one vehicle (§3.7). `data`:
+
+```json
+{
+  "vehicleId": "clx...",
+  "fuelCost": 12500.75,
+  "maintenanceCost": 8000,
+  "operationalCost": 20500.75
+}
+```
+
+`operationalCost = fuelCost + maintenanceCost` (tolls/misc expenses are tracked
+separately and deliberately excluded — see the Fuel & Expenses section).
+**404** `"Vehicle not found"` if unknown.
+
 ### `POST /api/vehicles` 🔒 ADMIN / FLEET_MANAGER
 
 | Field | Type | Required |
@@ -336,6 +353,65 @@ unknown.
 **204 No Content** on success. **404** if unknown. **409** if the vehicle is
 referenced by trips or logs — retire it (`status: "RETIRED"`) instead. See
 [`vehicles.md`](./vehicles.md#deletion).
+
+---
+
+## Fuel & Expenses (§3.7)
+
+Fuel purchases and non-fuel operational expenses (tolls / misc) are recorded
+per vehicle, optionally attributed to a trip. Maintenance is **not** an expense
+category here — its costs live on the maintenance log so the operational-cost
+formula (fuel + maintenance) never double-counts.
+
+Money fields accept a number or numeric string and are stored with 2-decimal
+precision. A trip-attributed log must reference a trip that belongs to the same
+vehicle, else **400** `"Trip does not belong to the specified vehicle"`.
+
+### `GET /api/fuel-logs` 🔒 FLEET_MANAGER / ADMIN / FINANCIAL_ANALYST / DRIVER
+
+Query: `vehicleId`, `tripId`, `page` (default `1`), `limit` (default `20`,
+max `100`). `data` is `{ items, pagination }`; each item includes a compact
+`vehicle` summary. Ordered by `date` desc.
+
+### `GET /api/fuel-logs/:id` 🔒 FLEET_MANAGER / ADMIN / FINANCIAL_ANALYST / DRIVER
+
+`data` is the FuelLog. **404** `"Fuel log not found"` if unknown.
+
+### `POST /api/fuel-logs` 🔒 FLEET_MANAGER / ADMIN / DRIVER
+
+| Field | Type | Required |
+|---|---|---|
+| `vehicleId` | string | yes |
+| `liters` | number > 0 | yes |
+| `cost` | number/string ≥ 0 | yes |
+| `tripId` | string | no |
+| `date` | ISO date (default now) | no |
+
+**201** `"Fuel log recorded"`, `data` is the created FuelLog. **404** if the
+vehicle or trip is unknown.
+
+### `GET /api/expenses` 🔒 FLEET_MANAGER / ADMIN / FINANCIAL_ANALYST
+
+Query: `vehicleId`, `tripId`, `category` (`TOLL` | `MISC`), `page`, `limit`.
+`data` is `{ items, pagination }`, ordered by `date` desc.
+
+### `GET /api/expenses/:id` 🔒 FLEET_MANAGER / ADMIN / FINANCIAL_ANALYST
+
+`data` is the Expense. **404** `"Expense not found"` if unknown.
+
+### `POST /api/expenses` 🔒 FLEET_MANAGER / ADMIN
+
+| Field | Type | Required |
+|---|---|---|
+| `vehicleId` | string | yes |
+| `category` | `TOLL` \| `MISC` | yes |
+| `amount` | number/string > 0 | yes |
+| `tripId` | string | no |
+| `description` | string | no |
+| `date` | ISO date (default now) | no |
+
+**201** `"Expense recorded"`, `data` is the created Expense. **404** if the
+vehicle or trip is unknown.
 
 ---
 
