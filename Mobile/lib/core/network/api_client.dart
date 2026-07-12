@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../constants/api_endpoints.dart';
 import 'api_envelope.dart';
 import 'api_error_handler.dart';
 import 'api_result.dart';
+import 'failure.dart';
 
 typedef JsonParser<T> = T Function(dynamic json);
 
@@ -98,6 +101,55 @@ class ApiClient {
       ),
       parser: parser,
     );
+  }
+
+  /// For non-envelope responses such as CSV exports.
+  Future<ApiResult<String>> getRaw(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    bool retry = false,
+  }) async {
+    try {
+      final response = await _dio.get<String>(
+        path,
+        queryParameters: queryParameters,
+        options: _options(retry).copyWith(
+          responseType: ResponseType.plain,
+        ),
+      );
+
+      final body = _rawBodyAsString(response.data);
+      if (response.statusCode == 200 && body.isNotEmpty) {
+        return ApiResult.success(body);
+      }
+
+      if (body.trimLeft().startsWith('{')) {
+        final decoded = jsonDecode(body);
+        return ApiEnvelope.parse<String>(decoded);
+      }
+
+      return ApiResult.failure(
+        const Failure(
+          message: 'Empty export response.',
+          type: FailureType.unknown,
+        ),
+      );
+    } catch (error) {
+      return ApiResult.failure(ApiErrorHandler.mapException(error));
+    }
+  }
+
+  static String _rawBodyAsString(dynamic data) {
+    if (data == null) {
+      return '';
+    }
+    if (data is String) {
+      return data;
+    }
+    if (data is List<int>) {
+      return utf8.decode(data);
+    }
+    return data.toString();
   }
 
   Options _options(bool retry) {

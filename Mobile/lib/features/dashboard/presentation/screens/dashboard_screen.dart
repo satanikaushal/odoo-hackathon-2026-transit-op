@@ -7,12 +7,9 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_gap.dart';
 import '../../../../shared/widgets/app_text.dart';
 import '../../application/dashboard_provider.dart';
-import '../../data/dashboard_mock_data.dart';
 import '../../domain/models/dashboard_kpis.dart';
 import '../widgets/dashboard_filters_section.dart';
 import '../widgets/dashboard_loading_shimmer.dart';
-import '../widgets/dashboard_recent_trips_section.dart';
-import '../widgets/dashboard_vehicle_status_chart.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -25,82 +22,32 @@ class DashboardScreen extends ConsumerWidget {
     return ListView(
       padding: Responsive.getPaddingSymmetric(horizontal: 16, vertical: 16),
       children: [
-        _DashboardDynamicSection(
-          state: state,
-          onTypeChanged: notifier.setType,
-          onStatusChanged: notifier.setStatus,
-          onRegionChanged: notifier.setRegion,
-          onRetryFilters: notifier.refresh,
-          onRetryKpis: notifier.retryKpis,
-        ),
-        const AppGap(24),
-        const DashboardRecentTripsSection(
-          trips: DashboardMockData.recentTrips,
-        ),
-        const AppGap(24),
-        const DashboardVehicleStatusChart(
-          breakdown: DashboardMockData.vehicleStatus,
-        ),
+        if (state.isInitialLoading)
+          const DashboardLoadingShimmer()
+        else if (state.filtersError != null)
+          _DashboardErrorCard(
+            message: state.filtersError!,
+            onRetry: notifier.refresh,
+          )
+        else if (state.filterOptions != null) ...[
+          DashboardFiltersSection(
+            options: state.filterOptions!,
+            selectedType: state.selectedType,
+            selectedStatus: state.selectedStatus,
+            selectedRegion: state.selectedRegion,
+            onTypeChanged: notifier.setType,
+            onStatusChanged: notifier.setStatus,
+            onRegionChanged: notifier.setRegion,
+          ),
+          const AppGap(20),
+          _DashboardKpiSection(
+            kpis: state.kpis,
+            isLoading: state.isKpisLoading,
+            error: state.kpisError,
+            onRetry: notifier.retryKpis,
+          ),
+        ],
         const AppGap(16),
-      ],
-    );
-  }
-}
-
-class _DashboardDynamicSection extends StatelessWidget {
-  const _DashboardDynamicSection({
-    required this.state,
-    required this.onTypeChanged,
-    required this.onStatusChanged,
-    required this.onRegionChanged,
-    required this.onRetryFilters,
-    required this.onRetryKpis,
-  });
-
-  final DashboardState state;
-  final ValueChanged<String?> onTypeChanged;
-  final ValueChanged<String?> onStatusChanged;
-  final ValueChanged<String?> onRegionChanged;
-  final VoidCallback onRetryFilters;
-  final VoidCallback onRetryKpis;
-
-  @override
-  Widget build(BuildContext context) {
-    if (state.isInitialLoading) {
-      return const DashboardLoadingShimmer();
-    }
-
-    if (state.filtersError != null) {
-      return _DashboardErrorCard(
-        message: state.filtersError!,
-        onRetry: onRetryFilters,
-      );
-    }
-
-    final filterOptions = state.filterOptions;
-    if (filterOptions == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        DashboardFiltersSection(
-          options: filterOptions,
-          selectedType: state.selectedType,
-          selectedStatus: state.selectedStatus,
-          selectedRegion: state.selectedRegion,
-          onTypeChanged: onTypeChanged,
-          onStatusChanged: onStatusChanged,
-          onRegionChanged: onRegionChanged,
-        ),
-        const AppGap(20),
-        _DashboardKpiSection(
-          kpis: state.kpis,
-          isLoading: state.isKpisLoading,
-          error: state.kpisError,
-          onRetry: onRetryKpis,
-        ),
       ],
     );
   }

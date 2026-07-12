@@ -15,6 +15,13 @@ import '../../features/auth/data/auth_token_storage.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/token_refresh_service.dart';
 import '../../features/dashboard/data/dashboard_repository.dart';
+import '../../features/fleet/data/fleet_repository.dart';
+import '../../features/drivers/data/drivers_repository.dart';
+import '../../features/trips/data/trips_repository.dart';
+import '../../features/maintenance/data/maintenance_repository.dart';
+import '../../features/analytics/data/reports_repository.dart';
+import '../../features/expenses/data/fuel_logs_repository.dart';
+import '../../features/expenses/data/expenses_repository.dart';
 import 'di_callbacks.dart';
 import 'service_locator.dart';
 
@@ -84,6 +91,34 @@ Future<void> configureDependencies(SharedPreferences sharedPreferences) async {
 
   getIt.registerLazySingleton(
     () => DashboardRepository(apiClient: getIt<ApiClient>()),
+  );
+
+  getIt.registerLazySingleton(
+    () => FleetRepository(apiClient: getIt<ApiClient>()),
+  );
+
+  getIt.registerLazySingleton(
+    () => DriversRepository(apiClient: getIt<ApiClient>()),
+  );
+
+  getIt.registerLazySingleton(
+    () => TripsRepository(apiClient: getIt<ApiClient>()),
+  );
+
+  getIt.registerLazySingleton(
+    () => MaintenanceRepository(apiClient: getIt<ApiClient>()),
+  );
+
+  getIt.registerLazySingleton(
+    () => ReportsRepository(apiClient: getIt<ApiClient>()),
+  );
+
+  getIt.registerLazySingleton(
+    () => FuelLogsRepository(apiClient: getIt<ApiClient>()),
+  );
+
+  getIt.registerLazySingleton(
+    () => ExpensesRepository(apiClient: getIt<ApiClient>()),
   );
 
   getIt.registerLazySingleton(

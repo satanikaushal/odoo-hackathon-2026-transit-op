@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../utils/responsive.dart';
 
@@ -16,6 +17,9 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.suffixIcon,
     this.enabled = true,
+    this.readOnly = false,
+    this.onTap,
+    this.inputFormatters,
   });
 
   final TextEditingController? controller;
@@ -29,6 +33,9 @@ class AppTextField extends StatelessWidget {
   final int maxLines;
   final Widget? suffixIcon;
   final bool enabled;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +48,9 @@ class AppTextField extends StatelessWidget {
       onFieldSubmitted: onFieldSubmitted,
       maxLines: maxLines,
       enabled: enabled,
+      readOnly: readOnly,
+      onTap: onTap,
+      inputFormatters: inputFormatters,
       style: TextStyle(fontSize: Responsive.getF(14)),
       decoration: InputDecoration(
         labelText: label,
