@@ -14,6 +14,7 @@ import '../storage/local_storage.dart';
 import '../../features/auth/data/auth_token_storage.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/token_refresh_service.dart';
+import '../../features/dashboard/data/dashboard_repository.dart';
 import 'di_callbacks.dart';
 import 'service_locator.dart';
 
@@ -79,6 +80,10 @@ Future<void> configureDependencies(SharedPreferences sharedPreferences) async {
       fcmService: getIt<FcmService>(),
       tokenRefreshService: getIt<TokenRefreshService>(),
     ),
+  );
+
+  getIt.registerLazySingleton(
+    () => DashboardRepository(apiClient: getIt<ApiClient>()),
   );
 
   getIt.registerLazySingleton(
