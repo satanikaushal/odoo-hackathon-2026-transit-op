@@ -11,6 +11,9 @@ import '../network/api_error_notifier.dart';
 import '../network/dio_client.dart';
 import '../network/unauthorized_handler.dart';
 import '../storage/local_storage.dart';
+import '../../features/auth/data/auth_token_storage.dart';
+import '../../features/auth/data/auth_repository.dart';
+import '../../features/auth/data/token_refresh_service.dart';
 import 'di_callbacks.dart';
 import 'service_locator.dart';
 
@@ -28,6 +31,10 @@ Future<void> configureDependencies(SharedPreferences sharedPreferences) async {
   getIt.registerSingleton(SessionExpiredBroadcaster());
 
   getIt.registerLazySingleton(SecureStorageService.new);
+
+  getIt.registerLazySingleton(
+    () => AuthTokenStorage(getIt<SecureStorageService>()),
+  );
 
   getIt.registerLazySingleton(
     () => PreferencesService(getIt<SharedPreferences>()),
@@ -52,11 +59,26 @@ Future<void> configureDependencies(SharedPreferences sharedPreferences) async {
     () => DioClient(
       secureStorage: getIt<SecureStorageService>(),
       unauthorizedHandler: getIt<UnauthorizedHandler>(),
+      tokenStorage: getIt<AuthTokenStorage>(),
     ),
   );
 
   getIt.registerLazySingleton(
+    () => getIt<DioClient>().tokenRefreshService,
+  );
+
+  getIt.registerLazySingleton(
     () => ApiClient(getIt<DioClient>().dio),
+  );
+
+  getIt.registerLazySingleton(
+    () => AuthRepository(
+      apiClient: getIt<ApiClient>(),
+      tokenStorage: getIt<AuthTokenStorage>(),
+      preferences: getIt<PreferencesService>(),
+      fcmService: getIt<FcmService>(),
+      tokenRefreshService: getIt<TokenRefreshService>(),
+    ),
   );
 
   getIt.registerLazySingleton(

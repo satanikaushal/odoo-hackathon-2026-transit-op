@@ -1,4 +1,6 @@
 abstract final class ApiEndpoints {
+  static const health = '/health';
+
   static const authLogin = '/auth/login';
   static const authLogout = '/auth/logout';
   static const authRefresh = '/auth/refresh';
@@ -13,9 +15,15 @@ abstract final class ApiEndpoints {
   static const expenses = '/expenses';
   static const analytics = '/analytics';
   static const settings = '/settings';
+
+  static bool skipsTokenRefresh(String path) {
+    final normalized = Uri.tryParse(path)?.path ?? path;
+    return normalized.endsWith(authLogin) || normalized.endsWith(authRefresh);
+  }
 }
 
 abstract final class ApiExtras {
   static const retry = 'retry';
   static const retryCount = 'retry_count';
+  static const retriedAfterRefresh = 'retried_after_refresh';
 }

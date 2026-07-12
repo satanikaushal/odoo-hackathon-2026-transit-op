@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_environment.dart';
+import '../../firebase_options.dart';
 import 'analytics_service.dart';
 import 'crash_reporter.dart';
 import 'fcm_service.dart';
@@ -14,7 +15,11 @@ class FirebaseInitializer {
     required AnalyticsService analyticsService,
     required FcmService fcmService,
   }) async {
-    await Firebase.initializeApp();
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
 
     final isDev = AppEnvironment.current.env == Env.DEV;
 
